@@ -1,0 +1,7 @@
+git
+node_modules
+build
+npm-debug.log
+scrape
+.env
+.DS_Store
