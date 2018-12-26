@@ -25,7 +25,7 @@ function parse(html, file) {
 			cite: item.next().contents().filter('strong').text(),
 			hash: crypto.createHash('md5').update(item.text()+item.next().contents().filter('strong').text()).digest('hex'),
 			fullCard: "<h4>"+item.text()+"</h4>"+item.nextUntil('h1, h2, h3, h4').toArray().map(p => "<p>"+$(p).html()+"</p>").join(''),
-			set: "NAME",
+			set: "Open Ev 2018",
 			fileName: file,
 			pocket: item.prevAll('h1').eq(0).text(),
 			hat: item.prevAll('h2').eq(0).text(),
@@ -66,9 +66,11 @@ const docMagic = async (file) => {
 	insertCards(cards);
 	return fileName;
 };
-while(!db.isAvailable){};
+
+while(!db.isAvailable) {}; // really shity hack to wait on db, will fix later with Promise
+
 (async () => {
-	const path = "FILE PATH";
+	const path = "/Users/arvindb/Code/openev-downloader/Download/";
 	files = await getFiles(path);
 	Promise.map(files, function(file) {
 		// Promise.map awaits for returned promises as well.
@@ -78,4 +80,5 @@ while(!db.isAvailable){};
 	}, {concurrency: 8}).then(function() {
 		console.log("Done!");
 	});
-})().catch(err => console.log(err));
+})()
+.catch(err => console.log(err));

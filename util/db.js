@@ -1,10 +1,12 @@
 const MongoClient = require('mongodb').MongoClient;
-const url = "mongodb://192.168.1.163";
+const uri = process.env.MONGO_LOCAL_CONN_URL;
+const dbName = process.env.MONGO_DB_NAME;
+
 var db = null;
-MongoClient.connect(url, function(err, client) {
+
+MongoClient.connect(uri, function(err, client) {
 	if(err){console.log(err);}
 	console.log("Connected successfully to database");
-	const dbName = 'carddb';
 	db = client.db(dbName);
 });
 
@@ -18,7 +20,7 @@ MongoClient.connect(url, function(err, client) {
 // };
 
 module.exports = {
-    getConnection : function() {
+  getConnection : function() {
        return db;
 	},
 	isAvailable : function() {

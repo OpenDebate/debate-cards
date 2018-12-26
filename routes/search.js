@@ -1,31 +1,36 @@
-const fetch = require('node-fetch');
-const request = require('request');
-const db = require('../db.js');
-const {ObjectId} = require('mongodb');
+const axios = require ('axios');
+const solrUri = process.env.SOLR_LOCAL_CONN_URL;
 
 module.exports = (app) => {
-  app.get('/search', (req, res) => {
+  app.get('/search', async (req, res) => {
+
+    let result = {
+        error: null,
+        status: 200,
+        meta: {
+            skip: 0,
+            limit: 0,
+            total: 0,
+        },
+        data: []
+    }
+
 	var solrParams = buildQuery(req.query.q) + buildFilter(req.query.s);
-    // make request to solr sever
-    var url = "http://192.168.1.163:8983/solr/carddb/select?"+solrParams+"&wt=json&indent=true";
+    var url = `${solrUri}/select?${solrParams}&wt=json&indent=true`;
     var log = req.query.q + (req.query.s.length>1 ? " | " + req.query.s.split(',') : "");
     console.log(log);
-    fetch(url)
-        .then(res => res.json())
-        .then(data => {
-            res.json({
-                status: "success",
-                meta: {
-                    skip: 0,
-                    limit: 0,
-                    total: data.response.docs.length
-                },
-                data: data.response.docs
-            });
-        }).catch(err => {
-            res.json({error:"something broke.",info:err.toString()});
-            console.error(err);
-        });    
+    
+    try {
+        const res = await axios(url);
+        const {docs} = res.data.response
+        result.data = docs
+        result.meta.length = docs.length
+    } catch (error) {
+        result.status = 400
+        result.error = 'Bad Request';
+    } finally {
+        res.status(result.status).send(result);
+    } 
   });
 };
 
