@@ -45,7 +45,7 @@ Place .env file in project root. Sample .env file at `env-example.txt`.
 Populate database using the parse script
 
 ```
-node util/parse.js
+node util/scrape.js
 ```
 
 The server can then be started by running 
