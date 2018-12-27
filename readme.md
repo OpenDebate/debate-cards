@@ -38,12 +38,21 @@ The scraping code is desgined to save data to the mongo database - in order to k
 mongo-connector -m localhost:27017 -t http://localhost:8983/solr/carddb -d solr_doc_manager&
 ```
 
-Pandoc also needs to be installed as a system dependency.
+Pandoc needs to be installed as a system dependency.
+
+Place .env file in project root. Sample .env file at `env-example.txt`.
+
+Populate database using the parse script
+
+```
+node util/parse.js
+```
 
 The server can then be started by running 
 ```
 npm start
 ```
+
 A proccess manager like [pm2](http://pm2.keymetrics.io) is recommended for production
 
 ## Public API
