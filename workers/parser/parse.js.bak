@@ -2,7 +2,7 @@ var pandoc = require('node-pandoc');
 const Promise = require('bluebird');
 var fs = require('fs');
 var cheerio = require('cheerio');
-const db = require('../db.js');
+const db = require('./db.js');
 var crypto = require('crypto');
 
 const getFiles = Promise.promisify((dir, cb) => {
@@ -25,7 +25,7 @@ function parse(html, file) {
 			cite: item.next().contents().filter('strong').text(),
 			hash: crypto.createHash('md5').update(item.text()+item.next().contents().filter('strong').text()).digest('hex'),
 			fullCard: "<h4>"+item.text()+"</h4>"+item.nextUntil('h1, h2, h3, h4').toArray().map(p => "<p>"+$(p).html()+"</p>").join(''),
-			set: "Open Ev 2018",
+			set: "HS Wiki 2018",
 			fileName: file,
 			pocket: item.prevAll('h1').eq(0).text(),
 			hat: item.prevAll('h2').eq(0).text(),
@@ -70,7 +70,7 @@ const docMagic = async (file) => {
 while(!db.isAvailable) {}; // really shity hack to wait on db, will fix later with Promise
 
 (async () => {
-	const path = "/Users/arvindb/Code/openev-downloader/Download/";
+	const path = "/Users/arvindb/Desktop/Open\ Source\ 17/";
 	files = await getFiles(path);
 	Promise.map(files, function(file) {
 		// Promise.map awaits for returned promises as well.
@@ -81,4 +81,4 @@ while(!db.isAvailable) {}; // really shity hack to wait on db, will fix later wi
 		console.log("Done!");
 	});
 })()
-.catch(err => console.log(err));
+.catch(err => console.log(err));a
