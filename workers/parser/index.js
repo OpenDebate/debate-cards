@@ -6,8 +6,9 @@ const dir = process.env.FILE_DIR;
 const File = require('@file');
 const Card = require('@card');
 
-let status = "running";
-console.log(`PARSER: ${status}`)
+let running = false;
+
+// console.log(`PARSER: ${status}`)
 const convert = Promise.promisify((file, cb) => {
   const fpath = path.join(dir, file.file)
   const args = '-f docx -t html5';
@@ -43,30 +44,38 @@ const save = async (cards) => {
 	)
 }
 
-const handler = async () => {
-  try {
-    const files = await File.model.find({status:'incomplete'});
-		if (files.length == 0 && status != "stopped") { return };
-		console.log(`PARSER: ${files.length} docs in queue`)
-    const file = files.slice(-1)[0]
-		// console.log(file.name)
-		
+const handleFile = async (file) => {
+  try {		
 		await File.model.updateOne({_id:file._id},{status:'parsing'})
-		
     const html = await convert(file);
 		const cards = parse(html, file);
 		await save(cards);
-
 		await File.model.updateOne({_id:file._id},{status:'complete'})
-		
+		return file.name
   } catch (error) {
     console.log(error);
 	}
-	handler();
 }
+
+const startBatch = async () => {
+	running = true;
+	const files = await File.model.find({status:'incomplete'}).sort({_id: -1});
+	if(files.length>0) {console.log(`PARSER: Processing ${files.length} files`)};
+	Promise.map(files, function(file) {
+		return handleFile(file)
+		.catch(err => {});
+	}, {concurrency: 2}).then(function() {
+		running = false;
+		//console.log("Done!");
+	});
+}
+
+
 
 // poll the db for new files once the queue has drained
 setInterval(
-	() => handler(), 
+	() => {
+		if(!running){startBatch()}
+	}, 
 	process.env.POLL_INTERVAL * 60 * 1000
 );
