@@ -9,17 +9,22 @@ const cardSchema = new Schema({
     ref:'File'
   },
   tag: {
-    type: 'String',
+    type: String,
     required: true,
     trim: true,
   },
   cite: {
-    type: 'String',
+    type: String,
     trim: true,
   },
+  text: {
+    type: String,
+    required: true,
+    minlength: 50
+  },
   card: {
-    type: 'String',
-    required: true
+    type: String,
+    required: true,
   },
   set: {
     type: String,
@@ -27,22 +32,22 @@ const cardSchema = new Schema({
     trim: true,
   },
   h1: {
-    type: 'String',
+    type: String,
     trim: true,
   },
   h2: {
-    type: 'String',
+    type: String,
     trim: true,
   },
   h3: {
-    type: 'String',
+    type: String,
     trim: true,
   },
   index: {
-    type: 'Number',
+    type: Number,
   },
   date: {
-    type: 'Date',
+    type: Date,
   },
 });
 

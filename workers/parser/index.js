@@ -24,6 +24,7 @@ const parse = (html, file)  => {
 			tag: item.text(),
 			cite: item.next().contents().filter('strong').text(),
 			card: "<h4>"+item.text()+"</h4>"+item.nextUntil('h1, h2, h3, h4').toArray().map(p => "<p>"+$(p).html()+"</p>").join(''),
+			text: item.nextUntil('h1, h2, h3, h4').text(),
 			set: file.set,
 			file: file._id,
 			h1: item.prevAll('h1').eq(0).text(),
