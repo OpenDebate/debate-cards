@@ -9,6 +9,7 @@
   "dependencies": {
     "axios": "^0.18.0",
     "bluebird": "^3.5.1",
+    "bluebird-queue": "^0.0.8",
     "body-parser": "~1.15.1",
     "cheerio": "^1.0.0-rc.2",
     "cookie-parser": "~1.4.3",
@@ -17,21 +18,26 @@
     "dotenv": "^6.2.0",
     "eslint": "^4.14.0",
     "express": "~4.13.4",
-    "fuse.js": "^3.2.0",
-    "hashcode": "^1.0.3",
-    "module-alias": "^2.0.6",
+    "form-data": "^2.3.3",
+    "module-alias": "^2.2.0",
     "mongodb": "^3.0.1",
+    "mongoose": "^5.4.19",
     "morgan": "~1.7.0",
-    "node-fetch": "^2.3.0",
+    "multer": "^1.4.1",
     "node-pandoc": "^0.3.0",
-    "promise-queue": "^2.2.5",
-    "request": "^2.85.0",
+    "request-promise": "^4.2.4",
     "serve-favicon": "~2.3.0",
     "solr-client": "^0.7.0",
     "tmp": "^0.0.33",
-    "tmp-promise": "^1.0.5"
+    "tmp-promise": "^1.0.5",
+    "uuid": "^3.3.2"
   },
   "devDependencies": {
     "nodemon": "^1.17.3"
+  },
+  "_moduleAliases": {
+    "@card": "components/card",
+    "@file": "components/file",
+    "@solr": "util/solr"
   }
 }
