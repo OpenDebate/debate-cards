@@ -9,7 +9,7 @@ If you're just trying to see how this works, `util/scrape.js` is probably what y
 
 ## Requirements
 
-* [NodeJs](http://nodejs.org) 
+* [node.js](http://nodejs.org) 
 * [mongodb](http://mongodb.org)
 * [mongo-connector](https://github.com/mongodb-labs/mongo-connector)
 * [solr](http://lucene.apache.org/solr/) 5.x
