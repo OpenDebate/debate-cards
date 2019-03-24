@@ -24,6 +24,28 @@ module.exports = (app) => {
   })
 
   app.get('/card/:id', async (req, res) => {
+    const {id} = req.params
+    let result = {
+      error: "",
+      status: 200,
+      meta: {
+          skip: 0,
+          limit: 0,
+          total: 1,
+      },
+      data: {}
+    }
+    try {
+      result.data = await controller.get({id})
+    } catch (error) {
+      result.status = 400;
+      result.error = error.message
+    } finally {
+      res.status(result.status).send(result)
+    }
+  });
+
+  app.get('/card', async (req, res) => {
     let result = {
       error: null,
       status: 200,
@@ -35,23 +57,13 @@ module.exports = (app) => {
       data: []
     }
     try {
-      controller.ge
+      result.data = await controller.getAll(req.query)
     } catch (error) {
-      
+      result.status = 400;
+      result.error = error;
+    } finally {
+      res.status(result.status).send(result)
     }
-    // try {
-    //   const docs = await db.getConnection()
-    //     .collection("cards_4")
-    //     .find({_id: ObjectId(req.params.id)})
-    //     .toArray(); 
-    //   result.status = 200;
-    //   result.data = docs[0]
-    // } catch (error) {
-    //   result.status = 400
-    //   result.error = 'Bad Request';
-    // } finally {
-    //   res.status(result.status).send(result);
-    // }   
   });
 };
 
