@@ -1,56 +1,56 @@
-const axios = require ('axios');
-// const solr = require('../util/solr')
-const solrUri = process.env.SOLR_LOCAL_CONN_URL;
+const axios = require("axios");
+const solr = require("@solr");
+const util = require('util')
+const { filter, fuzzy, field } = solr.util;
 
-module.exports = (app) => {
-  app.get('/search', async (req, res) => {
+module.exports = app => {
+  app.get("/search", async (req, res) => {
+    const { 
+      q, 
+      f="tag cite meta", 
+      s="", 
+      skip=0, 
+      limit=250 
+    } = req.query;
 
-    // let result = {
-    //     error: null,
-    //     status: 200,
-    //     meta: {
-    //         skip: 0,
-    //         limit: 0,
-    //         total: 0,
-    //     },
-    //     data: []
-    // }
-    // const {q, f} = req.query
-	// // var solrParams = buildQuery(req.query.q) + buildFilter(req.query.s);
-    // // var url = `${solrUri}/select?${solrParams}&wt=json&indent=true`;
-    // // var log = req.query.q + (req.query.s.length>1 ? " | " + req.query.s.split(',') : "");
-    // console.log(log);
-    
-    // try {
-    //     solr.getConnection.querey()
-    //         .q({tag_cite_meta:buildQueryString(q)})
-    //         .addParams({
-    //           wt: 'json',
-    //           indent: true
-    //       })
-    //     const res = await axios(url);
-    //     const {docs} = res.data.response
-    //     result.data = docs
-    //     result.meta.length = docs.length
-    // } catch (error) {
-    //     result.status = 400
-    //     result.error = 'Bad Request';
-    // } finally {
-    //     res.status(result.status).send(result);
-    // } 
+    let result = {
+      error: null,
+      status: 200,
+      meta: {
+        skip: skip,
+        limit: limit,
+        total: 0
+      },
+      data: []
+    };
+    // var solrParams = buildQuery(req.query.q) + buildFilter(req.query.s);
+    // var url = `${solrUri}/select?${solrParams}&wt=json&indent=true`;
+    // var log = req.query.q + (req.query.s.length>1 ? " | " + req.query.s.split(',') : "");
+
+    try {
+      console.log(solr.client)
+      const query = solr.client
+        .createQuery()
+        .q(fuzzy(q))
+        .edismax()
+        .qf(field(f.split(",")))
+        .start(skip)
+        .rows(limit)
+      if(s){query.matchFilter("set", "("+s.split(',').map(e=>`"${e}"`)+")")}  
+      const solrRes = await util.promisify(solr.client.search.bind(solr.client))(query)
+ 
+      console.log(solrRes)
+      const { docs, numFound } = solrRes.response;
+      result.data = docs;
+      result.meta.total = numFound;
+    } catch (error) {
+      console.log(error)
+      result.status = 400;
+      result.error = error.message;
+    } finally {
+      res.status(result.status).send(result);
+    } 
   });
 };
 
 // generate solr querey string from user search
-buildQueryString = (str) => {
-    var base="q=tag_cite_meta%3A";
-    var ret = str.split(" ").map(x =>  x.length > 5 ? x+"~2" : x).join(" ");
-    return `(${encodeURIComponent(ret)})`;
-};
-
-buildFilterString = sets => {
-    var q = sets.split(",").map(x => 
-        '"'+encodeURIComponent(x)+'"'
-    ).join(" ");
-    return "("+q+")";
-};
