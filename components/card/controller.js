@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const path = require('path');
 
-
 const Card = require('./model');
 
 
@@ -26,6 +25,25 @@ module.exports = {
       return card
     } catch (error) {
       throw error;
+    }
+  },
+  // ctxt =  {ids}
+  getMany: async (ctxt) => {
+    // const {ids} = ctxt;
+    try {
+      const ids = ctxt.ids.map(id => mongoose.Types.ObjectId(id));
+     const docs = await Card
+      .aggregate(
+        [
+          { $match: { _id: { $in: ids } } },
+          // idek what this does - some black magic to preserve order
+          {$addFields: {"__order": {$indexOfArray: [ids, "$_id" ]}}},
+          {$sort: {"__order": 1}}
+        ]            
+      )
+      return docs;
+    } catch (error) {
+      throw error
     }
   },
 

@@ -38,6 +38,6 @@
   "_moduleAliases": {
     "@card": "components/card",
     "@file": "components/file",
-    "@solr": "util/solr"
+    "@util": "util"
   }
 }

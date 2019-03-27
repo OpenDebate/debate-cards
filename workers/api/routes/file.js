@@ -28,7 +28,7 @@ module.exports = (app) => {
       result.data = data;
     } catch (error) {
       result.status = 400;
-      console.log(error)
+      console.error(error)
       result.error = error;
     } finally {
       res.status(result.status).send(result)

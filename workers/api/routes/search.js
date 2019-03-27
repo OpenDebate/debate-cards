@@ -1,5 +1,5 @@
 const axios = require("axios");
-const solr = require("@solr");
+const {solr} = require("@util");
 const util = require('util')
 const { filter, fuzzy, field } = solr.util;
 
@@ -28,7 +28,6 @@ module.exports = app => {
     // var log = req.query.q + (req.query.s.length>1 ? " | " + req.query.s.split(',') : "");
 
     try {
-      console.log(solr.client)
       const query = solr.client
         .createQuery()
         .q(fuzzy(q))
@@ -39,12 +38,11 @@ module.exports = app => {
       if(s){query.matchFilter("set", "("+s.split(',').map(e=>`"${e}"`)+")")}  
       const solrRes = await util.promisify(solr.client.search.bind(solr.client))(query)
  
-      console.log(solrRes)
       const { docs, numFound } = solrRes.response;
       result.data = docs;
       result.meta.total = numFound;
     } catch (error) {
-      console.log(error)
+      console.error(error)
       result.status = 400;
       result.error = error.message;
     } finally {
