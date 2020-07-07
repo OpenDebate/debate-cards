@@ -7,4 +7,4 @@ mongoose.connect(process.env.MONGO_CONN_URL, { useNewUrlParser: true })
 
 // load modules
 require('./workers/api');
-require('./workers/parser')
+require('./app/components/parser')

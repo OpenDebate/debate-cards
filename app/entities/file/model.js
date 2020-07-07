@@ -39,7 +39,10 @@ const fileSchema = new Schema({
     },
     code: {
       type: String
-    }
+    },
+    url: {
+      type: String
+    },
   }
 });
 

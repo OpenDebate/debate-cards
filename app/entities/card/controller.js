@@ -4,6 +4,8 @@ const path = require('path');
 const Card = require('./model');
 
 
+
+
 module.exports = {
   
   // ctxt = {card}
@@ -32,7 +34,7 @@ module.exports = {
     // const {ids} = ctxt;
     try {
       const ids = ctxt.ids.map(id => mongoose.Types.ObjectId(id));
-     const docs = await Card
+      let docs = await Card
       .aggregate(
         [
           { $match: { _id: { $in: ids } } },
@@ -41,11 +43,14 @@ module.exports = {
           {$sort: {"__order": 1}}
         ]            
       )
+      docs = await  Card.populate(docs, {path: "file"});
+
       return docs;
     } catch (error) {
       throw error
     }
   },
+  
 
   // ctxt = {skip, limit, query}
   getAll: async (ctxt) => {
