@@ -3,8 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon --inspect app.ks"
+    "prestart": "npm run build",
+    "start": "node ./build",
+    "dev": "ts-node-dev --respawn --transpileOnly ./src/",
+    "build": "tsc --project tsconfig.json && tscpaths -p tsconfig.json -s ./src -o ./build"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.2",
@@ -16,25 +18,21 @@
     "node-pandoc-promise": "^0.0.6"
   },
   "devDependencies": {
+    "@types/cheerio": "^0.22.21",
+    "@types/lodash": "^4.14.157",
+    "@types/node": "^14.0.19",
+    "@typescript-eslint/eslint-plugin": "^3.6.0",
+    "@typescript-eslint/parser": "^3.6.0",
     "eslint": "^7.4.0",
     "eslint-config-airbnb": "18.2.0",
     "eslint-config-airbnb-base": "^14.2.0",
     "eslint-config-prettier": "^6.11.0",
+    "eslint-import-resolver-alias": "^1.1.2",
     "eslint-plugin-import": "^2.22.0",
     "eslint-plugin-prettier": "^3.1.4",
     "prettier": "^2.0.5",
-    "ts-node": "^8.10.2"
-  },
-  "eslintConfig": {
-    "extends": [
-      "airbnb",
-      "plugin:prettier/recommended"
-    ],
-    "plugins": [
-      "prettier"
-    ],
-    "rules": {
-      "import/no-unresolved": 0
-    }
+    "ts-node-dev": "^1.0.0-pre.50",
+    "tscpaths": "^0.0.9",
+    "typescript": "^3.9.6"
   }
 }
