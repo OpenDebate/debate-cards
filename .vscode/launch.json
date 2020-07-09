@@ -1,33 +1,22 @@
 {
-  // Use IntelliSense to learn about possible attributes.
-  // Hover to view descriptions of existing attributes.
-  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
-
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "nodemon",
-      "runtimeExecutable": "nodemon",
-      "program": "${workspaceFolder}/app.js",
-      "restart": true,
-      "console": "internalConsole",
-      "internalConsoleOptions": "neverOpen"
-    },
     {
       "type": "node",
       "request": "launch",
       "name": "Launch Program",
-      "program": "${workspaceFolder}/app.js"
+      "program": "${workspaceFolder}/src/app.ts",
+      "preLaunchTask": "tsc -p tsconfig.json",
+      "outFiles": [
+        "${workspaceFolder}/build/**/*.js"
+      ]
     },
     {
-      "type": "node",
+      "type": "node-terminal",
+      "name": "Run Script: start",
       "request": "launch",
-      "name": "Debug File",
-      "program": "${file}"
-    },
-    
-   
+      "command": "npm run start",
+      "cwd": "${workspaceFolder}"
+    }
   ]
 }

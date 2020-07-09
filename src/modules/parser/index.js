@@ -8,10 +8,7 @@ const convertToMarkup = async (path) => {
   const mammothConfig = {};
 
   const markupA = await pandoc(path, ['-f', 'docx', '-t', 'html5']);
-  const { value: markupB } = await mammoth.convertToHtml(
-    { path },
-    mammothConfig,
-  );
+  const { value: markupB } = await mammoth.convertToHtml({ path }, mammothConfig);
 
   return { a: markupA, b: markupB };
 };
@@ -57,8 +54,7 @@ const mergeFormatting = (markupA, markupB) => {
       for (let index = 0; index < nodes.length; index += 1) {
         flattedNodes.push(nodes[index]);
         if (nodes[index].childNodes !== null) {
-          if (nodes[index].childNodes.length > 0)
-            flatten(nodes[index].childNodes, flattedNodes);
+          if (nodes[index].childNodes.length > 0) flatten(nodes[index].childNodes, flattedNodes);
         }
       }
     };
@@ -83,9 +79,7 @@ const mergeFormatting = (markupA, markupB) => {
       );
 
     tokens = tokens.map((paragraph) =>
-      paragraph.flatMap((node) =>
-        node.text.split('').map((text) => ({ text, format: node.format })),
-      ),
+      paragraph.flatMap((node) => node.text.split('').map((text) => ({ text, format: node.format }))),
     );
     return tokens;
   };
@@ -96,18 +90,14 @@ const mergeFormatting = (markupA, markupB) => {
   const mergedTokens = tokensA.map((paragraphs, i) =>
     paragraphs.map(({ text, format }, j) => ({
       text,
-      format: tokensB[i][j]
-        ? uniq([...tokensB[i][j].format, ...format]).sort()
-        : format,
+      format: tokensB[i][j] ? uniq([...tokensB[i][j].format, ...format]).sort() : format,
     })),
   );
 
   const simplifedTokens = mergedTokens.map((textBlock) => {
     const simplifiedBlock = textBlock.reduce((acc, node) => {
       const prevNode = acc.length > 0 ? acc[acc.length - 1] : undefined;
-      const isSameFormat = prevNode
-        ? isEqual(node.format, prevNode.format)
-        : false;
+      const isSameFormat = prevNode ? isEqual(node.format, prevNode.format) : false;
 
       if (!isSameFormat) {
         return [...acc, cloneDeep(node)];
@@ -125,8 +115,6 @@ const mergeFormatting = (markupA, markupB) => {
 };
 
 (async () => {
-  const res = await convertToMarkup(
-    '/Users/arvindb/Code/debate-cards/app/modules/parser/sample.docx',
-  );
+  const res = await convertToMarkup('/Users/arvindb/Code/debate-cards/app/modules/parser/sample.docx');
   await fs.writeFile('./output.html', await mergeFormatting(res.a, res.b));
 })();
