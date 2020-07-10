@@ -1,4 +1,4 @@
-import { markupToTokens, mergeTokens, TextToken } from 'app/services/convert';
+import { markupToTokens, mergeTokens, TextToken } from './';
 import mammoth from 'mammoth';
 import pandoc from 'node-pandoc-promise';
 

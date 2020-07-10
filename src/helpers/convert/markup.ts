@@ -1,5 +1,5 @@
 import ch from 'cheerio';
-import { TextToken, getStyle, getStyleByElement } from 'app/services/convert';
+import { TextToken, getStyle, getStyleByElement } from './';
 
 const flattenTree = (tree: any[]): any[] => {
   const flat = [];
