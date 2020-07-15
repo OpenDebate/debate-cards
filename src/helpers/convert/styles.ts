@@ -1,16 +1,15 @@
 import { findKey, pickBy } from 'lodash';
 
-interface style {
+interface Style {
   block: boolean;
   domSelector: string;
   domElement: string;
 }
-
-interface styleMap {
-  [key: string]: style;
+interface StyleMap {
+  [key: string]: Style;
 }
 
-export const styleMap: styleMap = {
+export const styleMap: StyleMap = {
   h1: {
     block: true,
     domSelector: 'h1',
@@ -53,10 +52,12 @@ export const styleMap: styleMap = {
   },
 };
 
+export type StyleName = keyof typeof styleMap & string;
+
 export const getStyleByElement = (elementName: string): string => {
   return findKey(styleMap, { domSelector: elementName });
 };
 
-export const getStyle = (filter: Partial<style>): string[] => {
+export const getStyles = (filter: Partial<Style>): string[] => {
   return Object.keys(pickBy(styleMap, filter));
 };
