@@ -1,3 +1,4 @@
+import { TextBlock } from './../../helpers/convert/tokens';
 import mongoose, { Schema, Document } from 'mongoose';
 
 const cardSchema = new Schema({
@@ -54,19 +55,19 @@ const cardSchema = new Schema({
   },
 });
 
-interface Card {
+export interface Card {
   tag: string | Schema.Types.ObjectId;
   cite: string;
   summary: string;
   markup: string;
   fulltext: string;
-  card_data: any;
+  card_data: TextBlock[];
   h1: string;
   h2: string;
   h3: string;
-  file_index: number;
-  hash: string;
-  fuzzy_has: string;
+  file_index?: number;
+  hash?: string;
+  fuzzy_hash?: string;
 }
 
 export type CardDocument = Card & Document;

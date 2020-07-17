@@ -42,7 +42,7 @@ const fileSchema = new Schema({
   },
 });
 
-interface File {
+export interface File {
   name: string;
   path: string;
   hash: string;

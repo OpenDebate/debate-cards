@@ -1,2 +1,2 @@
-// export * from './controller';
-// export * from './model';
+export * from './model';
+export default './';
