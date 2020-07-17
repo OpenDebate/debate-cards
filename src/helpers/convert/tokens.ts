@@ -11,8 +11,29 @@ export interface TextBlock {
   tokens: TextToken[];
 }
 
+const reconcileBlocks = (blockA: TextBlock, blockB: TextBlock) => {
+  const tokens = [];
+  // let tokensB = [];
+  let offsetA = 0;
+  let offsetB = 0;
+  blockA.tokens.forEach((_, idx) => {
+    const tokenA = blockA.tokens[idx + offsetA];
+    const tokenB = blockA.tokens[idx + offsetB];
+    if (tokenA.text == tokenB.text) {
+      tokens.push({
+        text: tokenA.text,
+        format: tokenB.format ? uniq([...tokenB.format, ...tokenA.format]).sort() : tokenA.format.sort(),
+      });
+    } else if (tokenA.text == ' ') {
+      offsetA++;
+    } else if (tokenB.text == ' ') {
+      offsetB++;
+    }
+  });
+};
+
 const combineFormat = (blocksA: TextBlock[], blocksB: TextBlock[]): TextBlock[] => {
-  const primaryBlocks = blocksA.map(({ tokens, format }, i) => {
+  return blocksA.map(({ tokens, format }, i) => {
     const tokensB = blocksB[i].tokens;
     if (tokens.length == tokensB.length) {
       return {
@@ -27,10 +48,7 @@ const combineFormat = (blocksA: TextBlock[], blocksB: TextBlock[]): TextBlock[] 
     }
   });
 };
-// tokens.map(({ text, format }, j) => ({
-//   text,
-//   format: blocksB[i][j] ? uniq([...blocksB[i][j].format, ...format]).sort() : format,
-// }))
+
 const simplifyTokens = (block: TextBlock): TextBlock => {
   const simplifiedTokens = block.tokens.reduce((acc, node) => {
     const prevNode = acc.length > 0 ? acc[acc.length - 1] : undefined;
