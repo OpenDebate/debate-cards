@@ -1,4 +1,4 @@
-import { TextBlock } from './../../helpers/convert/tokens';
+import { TextBlock } from 'app/helpers/convert/tokens';
 import mongoose, { Schema, Document } from 'mongoose';
 
 const cardSchema = new Schema({
