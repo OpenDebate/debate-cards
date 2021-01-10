@@ -38,11 +38,11 @@ export const getBlocksUntil = (blocks: TextBlock[], anchor: number, styles: Styl
 };
 
 const parseCard = (doc: TextBlock[], anchor = 0, idx): Partial<Card> => {
-  const headingStyles = getStyles({ heading: true });
-  const card = getBlocksUntil(doc, anchor, headingStyles);
-  const tag = card[0];
-  const cite = card[1];
-  const body = card.slice(2);
+  const blockStyles = getStyles({ heading: true });
+  const card = getBlocksUntil(doc, anchor, blockStyles);
+  const tag = card[0]; // first block element is the tag
+  const cite = card[1]; // assume second block element is the cite
+  const body = card.slice(2); // everything left is the card body
 
   const extractHeading = (name: string) => extractText([getLastBlockWith(doc, anchor, [name])]);
 

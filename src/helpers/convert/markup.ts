@@ -1,29 +1,10 @@
 import ch from 'cheerio';
-import { TextBlock, getStyles, getDocxStyles, getStyleByElement, styleMap, simplifyTokens } from './';
-import { Document, Packer, Paragraph, TextRun, IRunOptions, IParagraphOptions } from 'docx';
-import { promises as fs } from 'fs';
+import { TextBlock, getStyles, getStyleByElement, simplifyTokens, tokensToDocument } from './';
 
 export const markupToDocument = async (markup: string): Promise<Buffer> => {
-  const tokens = markupToTokens(markup);
-
-  const styles = await fs.readFile(`/Users/arvindbalaji/Code/debate-cards/src/helpers/convert/styles.xml`, 'utf-8');
-  const doc = new Document({ externalStyles: styles });
-
-  doc.addSection({
-    properties: {},
-    children: tokens.map(
-      (paragraph) =>
-        new Paragraph({
-          children: paragraph.tokens.map(
-            (run) => new TextRun({ text: run.text, ...(getDocxStyles(run.format) as IRunOptions) }),
-          ),
-          ...(styleMap[paragraph.format].docxStyles as IParagraphOptions),
-        }),
-    ),
-  });
-
-  const fileBuffer = await Packer.toBuffer(doc);
-  return fileBuffer;
+  const tokens = markupToTokens(markup, { simplifed: true });
+  const buffer = await tokensToDocument(tokens);
+  return buffer;
 };
 
 interface TokensOption {
