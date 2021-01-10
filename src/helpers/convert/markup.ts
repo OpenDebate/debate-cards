@@ -1,5 +1,43 @@
 import ch from 'cheerio';
-import { TextBlock, getStyles, getStyleByElement, styleMap } from './';
+import { TextBlock, getStyles, getDocxStyles, getStyleByElement, styleMap, simplifyTokens } from './';
+import { Document, Packer, Paragraph, TextRun, IRunOptions, IParagraphOptions } from 'docx';
+import { promises as fs } from 'fs';
+
+export const markupToDocument = async (markup: string): Promise<Buffer> => {
+  const tokens = markupToTokens(markup);
+
+  const styles = await fs.readFile(`/Users/arvindbalaji/Code/debate-cards/src/helpers/convert/styles.xml`, 'utf-8');
+  const doc = new Document({ externalStyles: styles });
+
+  doc.addSection({
+    properties: {},
+    children: tokens.map(
+      (paragraph) =>
+        new Paragraph({
+          children: paragraph.tokens.map(
+            (run) => new TextRun({ text: run.text, ...(getDocxStyles(run.format) as IRunOptions) }),
+          ),
+          ...(styleMap[paragraph.format].docxStyles as IParagraphOptions),
+        }),
+    ),
+  });
+
+  const fileBuffer = await Packer.toBuffer(doc);
+  return fileBuffer;
+};
+
+interface TokensOption {
+  simplifed: boolean;
+}
+
+export const markupToTokens = (markup: string, options?: TokensOption): TextBlock[] => {
+  const blocks = tokenize(markup);
+  if (options?.simplifed) {
+    const simplifedBlocks = blocks.map((block) => simplifyTokens(block));
+    return simplifedBlocks;
+  }
+  return blocks;
+};
 
 const flattenTree = (tree: any[]): any[] => {
   const flat = [];
@@ -40,29 +78,4 @@ const tokenize = (markup: string): TextBlock[] => {
   }));
 
   return tokens;
-};
-
-export const markupToTokens = (markup: string): TextBlock[] => {
-  const tokens = tokenize(markup);
-  return tokens;
-};
-
-export const tokensToMarkup = (textBlocks: TextBlock[]): string => {
-  const dom = ch.load('<div id="root"></div>');
-  textBlocks.forEach(({ format, tokens }) => {
-    const { domElement } = styleMap[format];
-    const containerEl = `<${domElement}></${domElement}>`;
-    dom('#root').append(containerEl);
-    tokens.forEach(({ text, format }) => {
-      let str = text;
-      format.forEach((style) => {
-        const elName = styleMap[style]?.domElement;
-        str = `<${elName}>${str}</${elName}>`;
-      });
-
-      dom('#root').children().last().append(str);
-    });
-  });
-
-  return dom('#root').html();
 };

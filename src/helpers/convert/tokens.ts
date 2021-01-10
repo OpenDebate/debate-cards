@@ -1,5 +1,8 @@
-import { StyleName } from './';
+import { StyleName, styleMap, getBlocksUntil, getDocxStyles, getIndexesWith } from './';
+import { Document, Packer, Paragraph, TextRun, IRunOptions, IParagraphOptions } from 'docx';
 import { uniq, cloneDeep, isEqual } from 'lodash';
+import ch from 'cheerio';
+import { promises as fs } from 'fs';
 
 export interface TextToken {
   text: string;
@@ -11,45 +14,48 @@ export interface TextBlock {
   tokens: TextToken[];
 }
 
-const reconcileBlocks = (blockA: TextBlock, blockB: TextBlock) => {
-  const tokens = [];
-  // let tokensB = [];
-  let offsetA = 0;
-  let offsetB = 0;
-  blockA.tokens.forEach((_, idx) => {
-    const tokenA = blockA.tokens[idx + offsetA];
-    const tokenB = blockA.tokens[idx + offsetB];
-    if (tokenA.text == tokenB.text) {
-      tokens.push({
-        text: tokenA.text,
-        format: tokenB.format ? uniq([...tokenB.format, ...tokenA.format]).sort() : tokenA.format.sort(),
+export const tokensToMarkup = (textBlocks: TextBlock[]): string => {
+  const dom = ch.load('<div id="root"></div>');
+  textBlocks.forEach(({ format, tokens }) => {
+    const { domElement } = styleMap[format];
+    const containerEl = `<${domElement}></${domElement}>`;
+    dom('#root').append(containerEl);
+    tokens.forEach(({ text, format }) => {
+      let str = text;
+      format.forEach((style) => {
+        const elName = styleMap[style]?.domElement;
+        str = `<${elName}>${str}</${elName}>`;
       });
-    } else if (tokenA.text == ' ') {
-      offsetA++;
-    } else if (tokenB.text == ' ') {
-      offsetB++;
-    }
+
+      dom('#root').children().last().append(str);
+    });
   });
+
+  return dom('#root').html();
 };
 
-const combineFormat = (blocksA: TextBlock[], blocksB: TextBlock[]): TextBlock[] => {
-  return blocksA.map(({ tokens, format }, i) => {
-    const tokensB = blocksB[i].tokens;
-    if (tokens.length == tokensB.length) {
-      return {
-        format,
-        tokens: tokens.map(({ text, format }, j) => ({
-          text,
-          format: tokensB[j].format ? uniq([...tokensB[j].format, ...format]).sort() : format,
-        })),
-      };
-    } else {
-      return { tokens, format };
-    }
+export const tokensToDocument = async (textBlocks: TextBlock[]): Promise<Buffer> => {
+  const styles = await fs.readFile(`/Users/arvindbalaji/Code/debate-cards/src/helpers/convert/styles.xml`, 'utf-8');
+  const doc = new Document({ externalStyles: styles });
+
+  doc.addSection({
+    properties: {},
+    children: textBlocks.map(
+      (paragraph) =>
+        new Paragraph({
+          children: paragraph.tokens.map(
+            (run) => new TextRun({ text: run.text, ...(getDocxStyles(run.format) as IRunOptions) }),
+          ),
+          ...(styleMap[paragraph.format].docxStyles as IParagraphOptions),
+        }),
+    ),
   });
+
+  const fileBuffer = await Packer.toBuffer(doc);
+  return fileBuffer;
 };
 
-const simplifyTokens = (block: TextBlock): TextBlock => {
+export const simplifyTokens = (block: TextBlock): TextBlock => {
   const simplifiedTokens = block.tokens.reduce((acc, node) => {
     const prevNode = acc.length > 0 ? acc[acc.length - 1] : undefined;
     const isSameFormat = prevNode ? isEqual(node.format, prevNode.format) : false;
@@ -64,19 +70,39 @@ const simplifyTokens = (block: TextBlock): TextBlock => {
   return { format: block.format, tokens: simplifiedTokens };
 };
 
-export const doesContainStyle = (block: TextBlock, styles: StyleName[]): boolean => {
-  // check if the format of an item in a TextBlock includes any of the passsed styles
-  // prettier-ignore
-  return block.tokens.some(({ format }) => 
-    format.some((tokenStyle) => 
-      styles.includes(tokenStyle)
-  ));
-};
-
 export const mergeTokens = (tokensA: TextBlock[], tokensB: TextBlock[]): TextBlock[] => {
   const mergedBlocks = combineFormat(tokensA, tokensB);
   const simplifedBlocks = mergedBlocks.map((block) => simplifyTokens(block));
   return simplifedBlocks;
 };
 
-// export const tokensToMarkup
+const combineFormat = (blocksPrimary: TextBlock[], blocksSecondary: TextBlock[]): TextBlock[] => {
+  let blocksMerged = cloneDeep(blocksPrimary);
+  const anchorsMerged = getIndexesWith(blocksMerged, ['h4']);
+  const anchorsB = getIndexesWith(blocksSecondary, ['h4']);
+  anchorsMerged.forEach((_, i) => {
+    const anchorMerged = anchorsMerged[i];
+    const anchorSecondary = anchorsB[i];
+    const restOfMergedBlocks = getBlocksUntil(blocksMerged, anchorMerged, ['h4']);
+    const restOfSecondaryBlocks = getBlocksUntil(blocksSecondary, anchorSecondary, ['h4']);
+
+    const mergedSegment = restOfMergedBlocks.map(({ tokens, format }, i) => {
+      const tokensSecondary = restOfSecondaryBlocks[i]?.tokens;
+      return {
+        format,
+        tokens: tokens.map(({ text, format }, j) => ({
+          text,
+          format:
+            tokensSecondary && tokensSecondary[j]?.format
+              ? uniq([...tokensSecondary[j]?.format, ...format]).sort()
+              : format,
+        })),
+      };
+    });
+
+    const start = blocksMerged.slice(0, anchorMerged);
+    const end = blocksMerged.slice(anchorMerged + mergedSegment.length, blocksMerged.length);
+    blocksMerged = [...start, ...mergedSegment, ...end];
+  });
+  return blocksMerged;
+};
