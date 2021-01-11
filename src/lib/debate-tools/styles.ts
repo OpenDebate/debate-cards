@@ -8,11 +8,10 @@ interface Style {
   domElement: string;
   docxStyles?: IParagraphOptions | IRunOptions;
 }
-interface StyleMap {
-  [key: string]: Style;
-}
 
-export const styleMap: StyleMap = {
+export type StyleName = 'h1' | 'h2' | 'h3' | 'h4' | 'p' | 'underline' | 'strong' | 'mark';
+
+export const styleMap: Record<StyleName, Style> = {
   h1: {
     block: true,
     heading: true,
@@ -88,15 +87,13 @@ export const styleMap: StyleMap = {
   },
 };
 
-export type StyleName = keyof typeof styleMap & string;
-
-export const getStyleByElement = (elementName: string): StyleName => {
+export const getStyleByElement = (elementName: StyleName): StyleName => {
   const predicate = ({ domSelector }) => domSelector.includes(elementName);
-  return findKey(styleMap, predicate);
+  return findKey(styleMap, predicate) as StyleName;
 };
 
 export const getStyles = (filter: Partial<Style>): StyleName[] => {
-  return Object.keys(pickBy(styleMap, filter));
+  return Object.keys(pickBy(styleMap, filter)) as StyleName[];
 };
 
 export const getDocxStyles = (styleNames: StyleName[]): IParagraphOptions | IRunOptions => {

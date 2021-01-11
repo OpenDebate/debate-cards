@@ -44,7 +44,7 @@ const parseCard = (doc: TextBlock[], anchor = 0, idx): Partial<Card> => {
   const cite = card[1]; // assume second block element is the cite
   const body = card.slice(2); // everything left is the card body
 
-  const extractHeading = (name: string) => extractText([getLastBlockWith(doc, anchor, [name])]);
+  const extractHeading = (name: StyleName) => extractText([getLastBlockWith(doc, anchor, [name])]);
 
   return {
     tag: extractText([tag]),
@@ -52,7 +52,7 @@ const parseCard = (doc: TextBlock[], anchor = 0, idx): Partial<Card> => {
     h1: extractHeading('h1'),
     h2: extractHeading('h2'),
     h3: extractHeading('h3'),
-    summary: extractText(body, ['emphasis']),
+    summary: extractText(body, ['underline']),
     fulltext: extractText(body),
     markup: tokensToMarkup(card),
     card_data: card,
