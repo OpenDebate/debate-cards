@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+// }
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Evidence {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  gid       String
+
+  tag      String
+  cite     String
+  summary  String?
+  fulltext String?
+  markup   String
+  h1       String?
+  h2       String?
+  h3       String?
+
+  File   File? @relation(fields: [fileId], references: [id])
+  fileId Int?
+}
+
+model File {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  gid       String
+
+  name String
+  path String
+
+  status       FileStatus? @relation(fields: [fileStatusId], references: [id])
+  fileStatusId Int?
+
+  evidence Evidence[]
+
+  EvidenceSet   EvidenceSet? @relation(fields: [evidenceSetId], references: [id])
+  evidenceSetId Int?
+}
+
+model EvidenceSet {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name  String
+  label String
+
+  files File[]
+}
+
+model FileStatus {
+  id Int @id @default(autoincrement())
+
+  name String
+
+  File File[]
+}
+
+// model Post {
+//   id        Int      @id @default(autoincrement())
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+//   title     String
+//   content   String?
+//   published Boolean  @default(false)
+//   author    User     @relation(fields: [authorId], references: [id])
+//   authorId  Int
+// }
+
+// model Profile {
+//   id     Int     @id @default(autoincrement())
+//   bio    String?
+//   user   User    @relation(fields: [userId], references: [id])
+//   userId Int     @unique
+// }
+
+// model User {
+//   id      Int      @id @default(autoincrement())
+//   email   String   @unique
+//   name    String?
+//   posts   Post[]
+//   profile Profile?
+// }
