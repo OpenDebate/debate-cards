@@ -35,20 +35,23 @@ export const tokensToMarkup = (textBlocks: TextBlock[]): string => {
 };
 
 export const tokensToDocument = async (textBlocks: TextBlock[]): Promise<Buffer> => {
-  const styles = await fs.readFile(`/Users/arvindbalaji/Code/debate-cards/src/helpers/convert/styles.xml`, 'utf-8');
-  const doc = new Document({ externalStyles: styles });
-
-  doc.addSection({
-    properties: {},
-    children: textBlocks.map(
-      (paragraph) =>
-        new Paragraph({
-          children: paragraph.tokens.map(
-            (run) => new TextRun({ text: run.text, ...(getDocxStyles(run.format) as IRunOptions) }),
-          ),
-          ...(styleMap[paragraph.format].docxStyles as IParagraphOptions),
-        }),
-    ),
+  const styles = await fs.readFile(`/Users/arvindb/dev/debate-cards/src/lib/debate-tools/styles.xml`, 'utf-8');
+  const doc = new Document({
+    externalStyles: styles,
+    sections: [
+      {
+        properties: {},
+        children: textBlocks.map(
+          (paragraph) =>
+            new Paragraph({
+              children: paragraph.tokens.map(
+                (run) => new TextRun({ text: run.text, ...(getDocxStyles(run.format) as IRunOptions) }),
+              ),
+              ...(styleMap[paragraph.format].docxStyles as IParagraphOptions),
+            }),
+        ),
+      },
+    ],
   });
 
   const fileBuffer = await Packer.toBuffer(doc);

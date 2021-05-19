@@ -1,2 +1,3 @@
-export * from './card';
+// export * from './card';
 export * from './file';
+export * from './evidence';

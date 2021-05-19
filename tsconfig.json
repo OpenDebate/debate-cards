@@ -3,16 +3,26 @@
     "module": "commonjs",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "allowJs": true,
     "target": "es6",
-    "lib": ["es2019"],
+    "lib": [
+      "dom",
+      "es2019",
+      "es5",
+      "es6"
+    ],
     "noImplicitAny": false,
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "build",
     "baseUrl": ".",
     "paths": {
-      "app/*": ["src/*"]
+      "app/*": [
+        "src/*"
+      ]
     }
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*"
+  ]
 }

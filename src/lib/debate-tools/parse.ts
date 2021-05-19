@@ -1,5 +1,5 @@
 import { TextBlock, StyleName, getStyles, tokensToMarkup } from '.';
-import { Card } from 'app/entities';
+import { Evidence } from 'app/entities';
 
 const extractText = (blocks: TextBlock[], styles?: StyleName[]): string => {
   if (!blocks[0]) return;
@@ -37,12 +37,19 @@ export const getBlocksUntil = (blocks: TextBlock[], anchor: number, styles: Styl
   return subDoc.slice(0, endIdx > 0 ? endIdx : blocks.length);
 };
 
-const parseCard = (doc: TextBlock[], anchor = 0, idx): Partial<Card> => {
+interface EvidenceData extends Evidence {
+  index: number;
+}
+
+const parseCard = (doc: TextBlock[], anchor = 0, idx): Partial<EvidenceData> => {
   const blockStyles = getStyles({ heading: true });
   const card = getBlocksUntil(doc, anchor, blockStyles);
-  const tag = card[0]; // first block element is the tag
-  const cite = card[1]; // assume second block element is the cite
-  const body = card.slice(2); // everything left is the card body
+  /*
+    first block element is the tag,
+    assume second block element is the cite,
+    everything left is the card body 
+   */
+  const [tag, cite, ...body] = card;
 
   const extractHeading = (name: StyleName) => extractText([getLastBlockWith(doc, anchor, [name])]);
 
@@ -55,8 +62,7 @@ const parseCard = (doc: TextBlock[], anchor = 0, idx): Partial<Card> => {
     summary: extractText(body, ['underline']),
     fulltext: extractText(body),
     markup: tokensToMarkup(card),
-    card_data: card,
-    file_index: idx,
+    index: idx,
   };
 };
 
