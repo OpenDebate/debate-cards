@@ -1,5 +1,5 @@
 import { TextBlock, StyleName, getStyles, tokensToMarkup } from '.';
-import { Card } from 'app/entities';
+import { Card } from '@prisma/client';
 
 const extractText = (blocks: TextBlock[], styles?: StyleName[]): string => {
   if (!blocks[0]) return;
@@ -49,14 +49,14 @@ const parseCard = (doc: TextBlock[], anchor = 0, idx): Partial<Card> => {
   return {
     tag: extractText([tag]),
     cite: extractText([cite], ['strong']),
-    h1: extractHeading('h1'),
-    h2: extractHeading('h2'),
-    h3: extractHeading('h3'),
+    heading1: extractHeading('h1'),
+    heading2: extractHeading('h2'),
+    heading3: extractHeading('h3'),
     summary: extractText(body, ['underline']),
-    fulltext: extractText(body),
+    fullText: extractText(body),
     markup: tokensToMarkup(card),
-    card_data: card,
-    file_index: idx,
+    // cardData: card,
+    fileIndex: idx,
   };
 };
 
