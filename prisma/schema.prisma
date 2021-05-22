@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String?
+}
+
+model EvidenceSet {
+  id    Int    @id @default(autoincrement())
+  name  String
+  tag   String
+  // relations
+  files File[]
+}
+
+model File {
+  id            Int         @id @default(autoincrement())
+  createdAt     DateTime    @default(now())
+  hash          String
+  filePath      String
+  name          String
+  date          DateTime    @default(now())
+  processed     Boolean     @default(false)
+  url           String?
+  author        String?
+  side          String?
+  // relations
+  cards         Card[]
+  evidenceSetId Int
+  evidenceSet   EvidenceSet @relation(fields: [evidenceSetId], references: [id])
+}
+
+model Card {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  hash      String
+  fileIndex Int
+  tag       String
+  cite      String
+  heading1  String
+  heading2  String
+  heading3  String
+  markup    String
+  fullText  String
+  summary   String
+  //relation
+  fileId    Int
+  file      File     @relation(fields: [fileId], references: [id])
+}
