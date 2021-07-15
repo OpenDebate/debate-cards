@@ -17,7 +17,8 @@
     "lodash": "^4.17.15",
     "mammoth": "github:Programmerino/mammoth.js",
     "node-pandoc-promise": "^0.0.6",
-    "sqlite3": "^5.0.0"
+    "sqlite3": "^5.0.0",
+    "tmp-promise": "^3.0.2"
   },
   "devDependencies": {
     "@types/cheerio": "^0.22.21",
