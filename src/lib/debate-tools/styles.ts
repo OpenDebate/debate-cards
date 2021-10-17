@@ -6,53 +6,58 @@ interface Style {
   heading: boolean;
   domSelector: string[];
   domElement: string;
+  xmlName?: string;
   docxStyles?: IParagraphOptions | IRunOptions;
 }
 
-export type StyleName = 'h1' | 'h2' | 'h3' | 'h4' | 'p' | 'underline' | 'strong' | 'mark';
+export type StyleName = 'pocket' | 'hat' | 'block' | 'tag' | 'text' | 'underline' | 'strong' | 'mark';
 
 export const styleMap: Record<StyleName, Style> = {
-  h1: {
+  pocket: {
     block: true,
     heading: true,
     domSelector: ['h1'],
     domElement: 'h1',
+    xmlName: "Heading1",
     docxStyles: {
       heading: HeadingLevel.HEADING_1,
       outlineLevel: 1,
     },
   },
-  h2: {
+  hat: {
     block: true,
     heading: true,
     domSelector: ['h2'],
     domElement: 'h2',
+    xmlName: "Heading2",
     docxStyles: {
       heading: HeadingLevel.HEADING_2,
       outlineLevel: 2,
     },
   },
-  h3: {
+  block: {
     block: true,
     heading: true,
     domSelector: ['h3'],
     domElement: 'h3',
+    xmlName: "Heading3",
     docxStyles: {
       heading: HeadingLevel.HEADING_3,
       outlineLevel: 3,
     },
   },
-  h4: {
+  tag: {
     block: true,
     heading: true,
     domSelector: ['h4'],
     domElement: 'h4',
+    xmlName: "Heading4",
     docxStyles: {
       heading: HeadingLevel.HEADING_4,
       outlineLevel: 4,
     },
   },
-  p: {
+  text: {
     block: true,
     heading: false,
     domSelector: ['p'],
@@ -87,10 +92,10 @@ export const styleMap: Record<StyleName, Style> = {
   },
 };
 
-export const getStyleByElement = (elementName: StyleName): StyleName => {
-  const predicate = ({ domSelector }) => domSelector.includes(elementName);
-  return findKey(styleMap, predicate) as StyleName;
-};
+export const getStyleNameByXml = (elXmlName: string): StyleName => {
+  const predicate = ({ xmlName = null }) => elXmlName === xmlName;
+  return (findKey(styleMap, predicate) ?? "text") as StyleName;
+}
 
 export const getStyles = (filter: Partial<Style>): StyleName[] => {
   return Object.keys(pickBy(styleMap, filter)) as StyleName[];

@@ -24,11 +24,12 @@ model Evidence {
   tag      String
   cite     String
   summary  String?
+  spoken   String?
   fulltext String?
   markup   String
-  h1       String?
-  h2       String?
-  h3       String?
+  pocket   String?
+  hat      String?
+  block    String?
 
   File   File? @relation(fields: [fileId], references: [id])
   fileId Int?

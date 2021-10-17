@@ -1,6 +1,6 @@
-import { StyleName, styleMap, getBlocksUntil, getDocxStyles, getIndexesWith } from './';
+import { StyleName, styleMap, getDocxStyles } from './';
 import { Document, Packer, Paragraph, TextRun, IRunOptions, IParagraphOptions } from 'docx';
-import { uniq, cloneDeep, isEqual } from 'lodash';
+import { cloneDeep, isEqual } from 'lodash';
 import ch from 'cheerio';
 import { promises as fs } from 'fs';
 
@@ -35,7 +35,7 @@ export const tokensToMarkup = (textBlocks: TextBlock[]): string => {
 };
 
 export const tokensToDocument = async (textBlocks: TextBlock[]): Promise<Buffer> => {
-  const styles = await fs.readFile(`/Users/arvindb/dev/debate-cards/src/lib/debate-tools/styles.xml`, 'utf-8');
+  const styles = await fs.readFile(`./src/lib/debate-tools/styles.xml`, 'utf-8');
   const doc = new Document({
     externalStyles: styles,
     sections: [
@@ -71,41 +71,4 @@ export const simplifyTokens = (block: TextBlock): TextBlock => {
   }, []);
 
   return { format: block.format, tokens: simplifiedTokens };
-};
-
-export const mergeTokens = (tokensA: TextBlock[], tokensB: TextBlock[]): TextBlock[] => {
-  const mergedBlocks = combineFormat(tokensA, tokensB);
-  const simplifedBlocks = mergedBlocks.map((block) => simplifyTokens(block));
-  return simplifedBlocks;
-};
-
-const combineFormat = (blocksPrimary: TextBlock[], blocksSecondary: TextBlock[]): TextBlock[] => {
-  let blocksMerged = cloneDeep(blocksPrimary);
-  const anchorsMerged = getIndexesWith(blocksMerged, ['h4']);
-  const anchorsB = getIndexesWith(blocksSecondary, ['h4']);
-  anchorsMerged.forEach((_, i) => {
-    const anchorMerged = anchorsMerged[i];
-    const anchorSecondary = anchorsB[i];
-    const restOfMergedBlocks = getBlocksUntil(blocksMerged, anchorMerged, ['h4']);
-    const restOfSecondaryBlocks = getBlocksUntil(blocksSecondary, anchorSecondary, ['h4']);
-
-    const mergedSegment = restOfMergedBlocks.map(({ tokens, format }, i) => {
-      const tokensSecondary = restOfSecondaryBlocks[i]?.tokens;
-      return {
-        format,
-        tokens: tokens.map(({ text, format }, j) => ({
-          text,
-          format:
-            tokensSecondary && tokensSecondary[j]?.format
-              ? uniq([...tokensSecondary[j]?.format, ...format]).sort()
-              : format,
-        })),
-      };
-    });
-
-    const start = blocksMerged.slice(0, anchorMerged);
-    const end = blocksMerged.slice(anchorMerged + mergedSegment.length, blocksMerged.length);
-    blocksMerged = [...start, ...mergedSegment, ...end];
-  });
-  return blocksMerged;
 };

@@ -1,63 +1,38 @@
-import mammoth from 'mammoth';
-import pandoc from 'node-pandoc-promise';
-import { markupToTokens, mergeTokens, TextBlock } from './';
+import { markupToTokens, TextBlock } from './';
 import { tokensToMarkup } from './tokens';
-import { file as tmpFile } from 'tmp-promise';
-import { promises as fs } from 'fs';
+import { ParseOne } from 'unzipper';
+import fs from 'fs';
 
 /* 
-  1 - open document as html with pandoc and mammoth
-  2 - tokenize html and merge output
+  1 - open document.xml and styles.xml by unzipping .docx file
+  2 - tokenize document.xml and pull info on named styles from styles.xml
 */
-export const documentToTokens = async (file: Buffer): Promise<TextBlock[]> => {
-  const markupA = await convertToHtml(file, { method: 'primary' });
-  const markupB = await convertToHtml(file, { method: 'secondary' });
-  const tokensA = markupToTokens(markupA, { simplifed: false });
-  const tokensB = markupToTokens(markupB, { simplifed: false });
-  const mergedTokens = mergeTokens(tokensA, tokensB);
-  return mergedTokens;
+export const documentToTokens = async (filepath: string): Promise<TextBlock[]> => {
+  const document = await loadXml(filepath, /document\.xml$/);
+  const styles = await loadXml(filepath, /styles\.xml$/);
+  const tokens = markupToTokens(document, styles, { simplifed: false });
+  return tokens;
 };
 
 /* 
-  1 - open document as html with pandoc and mammoth
-  2 - tokenize html and merge output
-  3 - reconstruct merged and cleaned html output
+  1 - open document.xml
+  2 - tokenize xml
+  3 - reconstruct cleaned html
 */
-export const documentToMarkup = async (file: Buffer): Promise<string> => {
-  const tokens = await documentToTokens(file);
+export const documentToMarkup = async (filepath: string): Promise<string> => {
+  const tokens = await documentToTokens(filepath);
   const markup = tokensToMarkup(tokens);
   return markup;
 };
 
-// const documentToMarkup = (file: Buffer) => {
-//   return documentToTokens(file).then((tokens) => tokensToMarkup(tokens));
-// };
-interface ConversionOptions {
-  method: 'primary' | 'secondary';
+// Load xml by unzipping docx file, file is regex for file name to look for
+const loadXml = (path: string, file: RegExp): Promise<string> => {
+  return new Promise(resolve => {
+    let data = "";
+    const stream = fs.createReadStream(path);
+    stream
+      .pipe(ParseOne(file))
+      .on("data", chunk => data += chunk)
+      .on("end", () => resolve(data))
+  })
 }
-
-const convertToHtml = async (file: Buffer, options: ConversionOptions): Promise<string> => {
-  if (options.method === 'primary') {
-    return openWithPandoc(file);
-  }
-  if (options.method === 'secondary') {
-    return openWithMammoth(file);
-  }
-  throw new Error('Invalid options');
-};
-
-const openWithPandoc = async (file: Buffer): Promise<string> => {
-  const { path, cleanup } = await tmpFile();
-  await fs.writeFile(path, file);
-  const value = await pandoc(path, ['-f', 'docx', '-t', 'html5']);
-  cleanup();
-  return value;
-};
-
-const openWithMammoth = async (file: Buffer): Promise<string> => {
-  const { path, cleanup } = await tmpFile();
-  await fs.writeFile(path, file);
-  const { value } = await mammoth.convertToHtml({ path });
-  cleanup();
-  return value;
-};

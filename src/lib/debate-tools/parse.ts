@@ -5,13 +5,13 @@ const extractText = (blocks: TextBlock[], styles?: StyleName[]): string => {
   if (!blocks[0]) return;
   return blocks
     .reduce((acc, block) => {
-      // filter tokens by styles
-      const filteredTokens = styles
-        ? block?.tokens.filter(({ format }) => styles.every((style) => format.includes(style)))
-        : block?.tokens;
-      // join text and add spacing
-      const text = filteredTokens.reduce((str, val) => str + `${val.text.trim()} `, '').trim();
-      return acc + text + '\n';
+      // join text and add spacing if skipping tokens
+      const text = block?.tokens.reduce((str, token) => {
+        if (!styles || styles.every(style => token.format.includes(style))) return str + token.text
+        else return str.trim() + ' '
+      }, '');
+
+      return acc.trim() + '\n' + text.trim();
     }, '')
     .trim();
 };
@@ -56,10 +56,11 @@ const parseCard = (doc: TextBlock[], anchor = 0, idx): Partial<EvidenceData> => 
   return {
     tag: extractText([tag]),
     cite: extractText([cite], ['strong']),
-    h1: extractHeading('h1'),
-    h2: extractHeading('h2'),
-    h3: extractHeading('h3'),
+    pocket: extractHeading('pocket'),
+    hat: extractHeading('hat'),
+    block: extractHeading('block'),
     summary: extractText(body, ['underline']),
+    spoken: extractText(body, ['mark']),
     fulltext: extractText(body),
     markup: tokensToMarkup(card),
     index: idx,
@@ -67,6 +68,6 @@ const parseCard = (doc: TextBlock[], anchor = 0, idx): Partial<EvidenceData> => 
 };
 
 export const extractCards = (doc: TextBlock[]): any[] => {
-  const anchors = getIndexesWith(doc, ['h4']);
+  const anchors = getIndexesWith(doc, ['tag']);
   return anchors.map((anchor, i) => parseCard(doc, anchor, i));
 };
