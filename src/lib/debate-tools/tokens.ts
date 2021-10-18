@@ -15,23 +15,22 @@ export interface TextBlock {
 }
 
 export const tokensToMarkup = (textBlocks: TextBlock[]): string => {
-  const dom = ch.load('<div id="root"></div>');
+  const dom = '';
   textBlocks.forEach(({ format, tokens }) => {
     const { domElement } = styleMap[format];
-    const containerEl = `<${domElement}></${domElement}>`;
-    dom('#root').append(containerEl);
+    dom += `<${domElement}>`;
     tokens.forEach(({ text, format }) => {
       let str = text;
       format.forEach((style) => {
         const elName = styleMap[style]?.domElement;
         str = `<${elName}>${str}</${elName}>`;
       });
-
-      dom('#root').children().last().append(str);
+      dom += str
     });
+    dom += `</${domElement}>`;
   });
 
-  return dom('#root').html();
+  return dom;
 };
 
 export const tokensToDocument = async (textBlocks: TextBlock[]): Promise<Buffer> => {
