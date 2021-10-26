@@ -1,7 +1,6 @@
 import { StyleName, styleMap, getDocxStyles } from './';
 import { Document, Packer, Paragraph, TextRun, IRunOptions, IParagraphOptions } from 'docx';
 import { cloneDeep, isEqual } from 'lodash';
-import ch from 'cheerio';
 import { promises as fs } from 'fs';
 
 export interface TextToken {
@@ -15,7 +14,7 @@ export interface TextBlock {
 }
 
 export const tokensToMarkup = (textBlocks: TextBlock[]): string => {
-  const dom = '';
+  let dom = '';
   textBlocks.forEach(({ format, tokens }) => {
     const { domElement } = styleMap[format];
     dom += `<${domElement}>`;
@@ -25,7 +24,7 @@ export const tokensToMarkup = (textBlocks: TextBlock[]): string => {
         const elName = styleMap[style]?.domElement;
         str = `<${elName}>${str}</${elName}>`;
       });
-      dom += str
+      dom += str;
     });
     dom += `</${domElement}>`;
   });
