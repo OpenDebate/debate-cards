@@ -1,13 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// datasource db {
-//   provider = "postgresql"
-//   url      = env("DATABASE_URL")
-// }
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -19,7 +12,7 @@ model Evidence {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  gid       String
+  gid       String   @unique
 
   tag      String
   cite     String
@@ -30,7 +23,7 @@ model Evidence {
   h2       String?
   h3       String?
 
-  File   File? @relation(fields: [fileId], references: [id])
+  file   File? @relation(fields: [fileId], references: [id])
   fileId Int?
 }
 
@@ -38,18 +31,17 @@ model File {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  gid       String
+  gid       String   @unique
 
-  name String
-  path String
+  name   String
+  path   String
+  status FileStatus @default(PENDING)
 
-  status       FileStatus? @relation(fields: [fileStatusId], references: [id])
-  fileStatusId Int?
+  evidenceSet   EvidenceSet? @relation(fields: [evidenceSetId], references: [id])
+  evidenceSetId Int?
 
   evidence Evidence[]
-
-  EvidenceSet   EvidenceSet? @relation(fields: [evidenceSetId], references: [id])
-  evidenceSetId Int?
+  tags     Tags[]
 }
 
 model EvidenceSet {
@@ -63,36 +55,21 @@ model EvidenceSet {
   files File[]
 }
 
-model FileStatus {
-  id Int @id @default(autoincrement())
-
-  name String
-
-  File File[]
+enum FileStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  ERROR
 }
 
-// model Post {
-//   id        Int      @id @default(autoincrement())
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-//   title     String
-//   content   String?
-//   published Boolean  @default(false)
-//   author    User     @relation(fields: [authorId], references: [id])
-//   authorId  Int
-// }
+model Tags {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-// model Profile {
-//   id     Int     @id @default(autoincrement())
-//   bio    String?
-//   user   User    @relation(fields: [userId], references: [id])
-//   userId Int     @unique
-// }
+  name  String
+  label String
 
-// model User {
-//   id      Int      @id @default(autoincrement())
-//   email   String   @unique
-//   name    String?
-//   posts   Post[]
-//   profile Profile?
-// }
+  file   File @relation(fields: [fileId], references: [id])
+  fileId Int
+}
