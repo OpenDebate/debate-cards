@@ -41,7 +41,7 @@ interface EvidenceData extends Evidence {
   index: number;
 }
 
-const parseCard = (doc: TextBlock[], anchor = 0, idx): Partial<EvidenceData> => {
+const parseCard = (doc: TextBlock[], anchor = 0, idx: number) => {
   const blockStyles = getStyles({ heading: true });
   const card = getBlocksUntil(doc, anchor, blockStyles);
   /*
@@ -66,7 +66,7 @@ const parseCard = (doc: TextBlock[], anchor = 0, idx): Partial<EvidenceData> => 
   };
 };
 
-export const extractCards = (doc: TextBlock[]): any[] => {
+export const extractCards = (doc: TextBlock[]): ReturnType<typeof parseCard>[] => {
   const anchors = getIndexesWith(doc, ['h4']);
   return anchors.map((anchor, i) => parseCard(doc, anchor, i));
 };
