@@ -10,7 +10,7 @@ import fs from 'fs';
 export const documentToTokens = async (filepath: string): Promise<TextBlock[]> => {
   const document = await loadXml(filepath, /document\.xml$/);
   const styles = await loadXml(filepath, /styles\.xml$/);
-  const tokens = markupToTokens(document, styles, { simplifed: false });
+  const tokens = markupToTokens(document, styles, { simplified: true });
   return tokens;
 };
 

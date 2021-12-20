@@ -1,15 +1,17 @@
-import { StyleName, styleMap, getDocxStyles } from './';
+import { SectionStyleName, TokenStyleName, styleMap, getDocxStyles } from './';
 import { Document, Packer, Paragraph, TextRun, IRunOptions, IParagraphOptions } from 'docx';
 import { cloneDeep, isEqual } from 'lodash';
 import { promises as fs } from 'fs';
 
+export type TokenStyle = Partial<Record<TokenStyleName, boolean>>;
+
 export interface TextToken {
   text: string;
-  format: StyleName[];
+  format: TokenStyle;
 }
 
 export interface TextBlock {
-  format: StyleName;
+  format: SectionStyleName;
   tokens: TextToken[];
 }
 
@@ -20,10 +22,10 @@ export const tokensToMarkup = (textBlocks: TextBlock[]): string => {
     dom += `<${domElement}>`;
     tokens.forEach(({ text, format }) => {
       let str = text;
-      format.forEach((style) => {
+      for (const style in format) {
         const elName = styleMap[style]?.domElement;
         str = `<${elName}>${str}</${elName}>`;
-      });
+      }
       dom += str;
     });
     dom += `</${domElement}>`;
@@ -59,7 +61,7 @@ export const tokensToDocument = async (textBlocks: TextBlock[]): Promise<Buffer>
 export const simplifyTokens = (block: TextBlock): TextBlock => {
   const simplifiedTokens = block.tokens.reduce((acc, node) => {
     const prevNode = acc.length > 0 ? acc[acc.length - 1] : undefined;
-    const isSameFormat = prevNode ? isEqual(node.format, prevNode.format) : false;
+    const isSameFormat = prevNode && isEqual(node.format, prevNode.format);
 
     if (!isSameFormat) {
       return [...acc, cloneDeep(node)];

@@ -7,7 +7,7 @@ const extractText = (blocks: TextBlock[], styles?: StyleName[]): string => {
     .reduce((acc, block) => {
       // join text and add spacing if skipping tokens
       const text = block?.tokens.reduce((str, token) => {
-        if (!styles || styles.every((style) => token.format.includes(style))) return str + token.text;
+        if (!styles || styles.every((style) => token.format[style])) return str + token.text;
         else return str.trim() + ' ';
       }, '');
 

@@ -1,5 +1,6 @@
 import { HeadingLevel, IParagraphOptions, IRunOptions } from 'docx';
 import { findKey, pickBy } from 'lodash';
+import { TokenStyle } from '.';
 
 interface Style {
   block: boolean;
@@ -10,7 +11,9 @@ interface Style {
   docxStyles?: IParagraphOptions | IRunOptions;
 }
 
-export type StyleName = 'pocket' | 'hat' | 'block' | 'tag' | 'text' | 'underline' | 'strong' | 'mark';
+export type SectionStyleName = 'pocket' | 'hat' | 'block' | 'tag' | 'text';
+export type TokenStyleName = 'underline' | 'strong' | 'mark';
+export type StyleName = SectionStyleName | TokenStyleName;
 
 export const styleMap: Record<StyleName, Style> = {
   pocket: {
@@ -92,16 +95,16 @@ export const styleMap: Record<StyleName, Style> = {
   },
 };
 
-export const getStyleNameByXml = (elXmlName: string): StyleName => {
+export const getStyleNameByXml = (elXmlName: string): SectionStyleName => {
   const predicate = ({ xmlName = null }) => elXmlName === xmlName;
-  return (findKey(styleMap, predicate) ?? 'text') as StyleName;
+  return (findKey(styleMap, predicate) ?? 'text') as SectionStyleName;
 };
 
 export const getStyles = (filter: Partial<Style>): StyleName[] => {
   return Object.keys(pickBy(styleMap, filter)) as StyleName[];
 };
 
-export const getDocxStyles = (styleNames: StyleName[]): IParagraphOptions | IRunOptions => {
-  const mergedStyles = styleNames.reduce((acc, key) => ({ ...acc, ...styleMap[key]?.docxStyles }), {});
+export const getDocxStyles = (styleNames: TokenStyle): IParagraphOptions | IRunOptions => {
+  const mergedStyles = Object.keys(styleNames).reduce((acc, key) => ({ ...acc, ...styleMap[key]?.docxStyles }), {});
   return mergedStyles;
 };

@@ -1,22 +1,22 @@
 import ch from 'cheerio';
-import { union } from 'lodash';
-import { TextBlock, getStyleNameByXml, simplifyTokens, tokensToDocument } from './';
+import { pickBy } from 'lodash';
+import { TextBlock, getStyleNameByXml, TokenStyle, StyleName, simplifyTokens, tokensToDocument } from './';
 
 export const markupToDocument = async (xml: string, styles: string): Promise<Buffer> => {
-  const tokens = markupToTokens(xml, styles, { simplifed: true });
+  const tokens = markupToTokens(xml, styles, { simplified: true });
   const buffer = await tokensToDocument(tokens);
   return buffer;
 };
 
 interface TokensOption {
-  simplifed: boolean;
+  simplified: boolean;
 }
 
 export const markupToTokens = (document: string, styles: string, options?: TokensOption): TextBlock[] => {
   const blocks = tokenize(document, styles);
-  if (options?.simplifed) {
-    const simplifedBlocks = blocks.map((block) => simplifyTokens(block));
-    return simplifedBlocks;
+  if (options?.simplified) {
+    const simplifiedBlocks = blocks.map((block) => simplifyTokens(block));
+    return simplifiedBlocks;
   }
   return blocks;
 };
@@ -27,20 +27,21 @@ const getChild = (el, names: string[]) =>
   }, el);
 
 // Extract what formatting applies to block of text
-const getElFormating = (styleEl) => {
+const updateElFormating = (current: TokenStyle, styleEl): TokenStyle => {
+  const formatting: TokenStyle = { ...current } ?? {};
   const styles = getChild(styleEl, ['w:rPr']);
-  if (!styles) return [];
+  if (!styles) return formatting;
 
   const highlight = getChild(styles, ['w:highlight']);
   const bold = getChild(styles, ['w:b']);
   const underline = getChild(styles, ['w:u'])?.attribs['w:val'];
 
-  const formating = [];
-  if (highlight) formating.push('mark');
-  if (bold && bold.attribs['w:val'] !== '0') formating.push('strong');
-  if (underline && underline !== 'none') formating.push('underline');
+  if (highlight) formatting.mark = true;
+  if (bold) formatting.strong = bold.attribs['w:val'] !== '0';
+  if (underline) formatting.underline = underline !== 'none';
 
-  return formating;
+  // Remove keys that are false
+  return pickBy(formatting, (el) => el);
 };
 
 const tokenize = (xml: string, styles: string): TextBlock[] => {
@@ -48,10 +49,10 @@ const tokenize = (xml: string, styles: string): TextBlock[] => {
   const d = ch.load(xml, { xmlMode: true });
 
   // Generate map of style names to formatting from styles.xml
-  const xmlStyles = s('w\\:style')
+  const xmlStyles: Record<string, TokenStyle> = s('w\\:style')
     .get()
     .reduce((acc, node) => {
-      acc[node.attribs['w:styleId']] = getElFormating(node);
+      acc[node.attribs['w:styleId']] = updateElFormating({}, node);
       return acc;
     }, {});
 
@@ -65,7 +66,7 @@ const tokenize = (xml: string, styles: string): TextBlock[] => {
         .map((node) => ({
           text: ch(node).text(),
           // combine formatting defined in text block and formatting from style name
-          format: union(getElFormating(node), xmlStyles[getChild(node, ['w:rPr', 'w:rStyle'])?.attribs['w:val']]),
+          format: updateElFormating(xmlStyles[getChild(node, ['w:rPr', 'w:rStyle'])?.attribs['w:val']], node),
         })),
     }));
 
