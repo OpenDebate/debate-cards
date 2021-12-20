@@ -3,7 +3,7 @@ import { Document, Packer, Paragraph, TextRun, IRunOptions, IParagraphOptions } 
 import { cloneDeep, isEqual } from 'lodash';
 import { promises as fs } from 'fs';
 
-export type TokenStyle = Partial<Record<TokenStyleName, boolean>>;
+export type TokenStyle = Record<TokenStyleName, boolean>;
 
 export interface TextToken {
   text: string;
@@ -17,16 +17,24 @@ export interface TextBlock {
 
 export const tokensToMarkup = (textBlocks: TextBlock[]): string => {
   let dom = '';
+  const state: TokenStyle = { underline: false, strong: false, mark: false };
   textBlocks.forEach(({ format, tokens }) => {
+    if (!tokens.length) return;
+
     const { domElement } = styleMap[format];
     dom += `<${domElement}>`;
     tokens.forEach(({ text, format }) => {
-      let str = text;
-      for (const style in format) {
-        const elName = styleMap[style]?.domElement;
-        str = `<${elName}>${str}</${elName}>`;
+      if (!text) return;
+
+      let tags = '';
+      for (const style in state) {
+        if (state[style] !== format[style]) {
+          const elName = styleMap[style]?.domElement;
+          tags += `<${format[style] ? '' : '/'}${elName}>`;
+          state[style] = format[style];
+        }
       }
-      dom += str;
+      dom += tags + text;
     });
     dom += `</${domElement}>`;
   });

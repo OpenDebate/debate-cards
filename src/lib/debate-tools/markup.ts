@@ -1,6 +1,14 @@
 import ch from 'cheerio';
-import { pickBy } from 'lodash';
-import { TextBlock, getStyleNameByXml, TokenStyle, StyleName, simplifyTokens, tokensToDocument } from './';
+import {} from '..';
+import {
+  TextBlock,
+  getStyleNameByXml,
+  TokenStyle,
+  SectionStyleName,
+  simplifyTokens,
+  tokensToDocument,
+  getStyleNameByOutlineLvl,
+} from './';
 
 export const markupToDocument = async (xml: string, styles: string): Promise<Buffer> => {
   const tokens = markupToTokens(xml, styles, { simplified: true });
@@ -27,8 +35,8 @@ const getChild = (el, names: string[]) =>
   }, el);
 
 // Extract what formatting applies to block of text
-const updateElFormating = (current: TokenStyle, styleEl): TokenStyle => {
-  const formatting: TokenStyle = { ...current } ?? {};
+const updateElFormating = (styleEl, current?: TokenStyle): TokenStyle => {
+  const formatting: TokenStyle = current ? { ...current } : { underline: false, strong: false, mark: false };
   const styles = getChild(styleEl, ['w:rPr']);
   if (!styles) return formatting;
 
@@ -40,8 +48,16 @@ const updateElFormating = (current: TokenStyle, styleEl): TokenStyle => {
   if (bold) formatting.strong = bold.attribs['w:val'] !== '0';
   if (underline) formatting.underline = underline !== 'none';
 
-  // Remove keys that are false
-  return pickBy(formatting, (el) => el);
+  return formatting;
+};
+
+const getBlockFormat = (block): SectionStyleName => {
+  const stlyeNameFormat = getStyleNameByXml(getChild(block, ['w:pPr', 'w:pStyle'])?.attribs['w:val']);
+  if (stlyeNameFormat !== 'text') return stlyeNameFormat;
+
+  // Sometimes uses outline level instead of header
+  const outlineLvl = getChild(block, ['w:pPr', 'w:outlineLvl'])?.attribs['w:val'];
+  return getStyleNameByOutlineLvl(parseInt(outlineLvl) + 1);
 };
 
 const tokenize = (xml: string, styles: string): TextBlock[] => {
@@ -52,21 +68,21 @@ const tokenize = (xml: string, styles: string): TextBlock[] => {
   const xmlStyles: Record<string, TokenStyle> = s('w\\:style')
     .get()
     .reduce((acc, node) => {
-      acc[node.attribs['w:styleId']] = updateElFormating({}, node);
+      acc[node.attribs['w:styleId']] = updateElFormating(node);
       return acc;
     }, {});
 
   const tokens: TextBlock[] = d('w\\:p')
     .get()
     .map((block) => ({
-      format: getStyleNameByXml(getChild(block, ['w:pPr', 'w:pStyle'])?.attribs['w:val']),
+      format: getBlockFormat(block),
       tokens: ch(block)
         .children('w\\:r')
         .get()
         .map((node) => ({
           text: ch(node).text(),
           // combine formatting defined in text block and formatting from style name
-          format: updateElFormating(xmlStyles[getChild(node, ['w:rPr', 'w:rStyle'])?.attribs['w:val']], node),
+          format: updateElFormating(node, xmlStyles[getChild(node, ['w:rPr', 'w:rStyle'])?.attribs['w:val']]),
         })),
     }));
 

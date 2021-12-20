@@ -100,11 +100,17 @@ export const getStyleNameByXml = (elXmlName: string): SectionStyleName => {
   return (findKey(styleMap, predicate) ?? 'text') as SectionStyleName;
 };
 
+export const getStyleNameByOutlineLvl = (outlineLvl: number): SectionStyleName => {
+  const predicate = ({ docxStyles = null }) => outlineLvl === docxStyles?.outlineLevel;
+  return (findKey(styleMap, predicate) ?? 'text') as SectionStyleName;
+};
+
 export const getStyles = (filter: Partial<Style>): StyleName[] => {
   return Object.keys(pickBy(styleMap, filter)) as StyleName[];
 };
 
 export const getDocxStyles = (styleNames: TokenStyle): IParagraphOptions | IRunOptions => {
-  const mergedStyles = Object.keys(styleNames).reduce((acc, key) => ({ ...acc, ...styleMap[key]?.docxStyles }), {});
+  const styles = pickBy(styleNames, (el) => el); // Get only styles that are set as true
+  const mergedStyles = Object.keys(styles).reduce((acc, key) => ({ ...acc, ...styleMap[key]?.docxStyles }), {});
   return mergedStyles;
 };
