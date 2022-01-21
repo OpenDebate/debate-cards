@@ -1,26 +1,15 @@
-import { documentToTokens, tokensToMarkup, extractCards, tokensToDocument } from 'app/lib';
-import { promises as fs } from 'fs';
+import generateFile from 'app/actions/generateFile';
+import { db } from 'app/lib';
+import { writeFile } from 'fs/promises';
 (async () => {
-  const SAMPLE_FILE = '/Users/arvindb/Downloads/file.docx';
   try {
-    const tokens = await documentToTokens(SAMPLE_FILE);
-    const markup = tokensToMarkup(tokens);
-    const cards = extractCards(tokens);
-    await fs.writeFile(
-      './output-doc.html',
-      `
-      <style>
-        em {
-          text-decoration: underline;
-          font-style: normal;
-        }
-      </style>
-      ${markup}
-    `,
-    );
-    fs.writeFile('./output-doc.docx', await tokensToDocument(tokens));
-
-    console.log(cards);
+    const ids = (
+      await db.evidence.findMany({
+        where: { fileId: 1 },
+      })
+    ).map((card) => card.id);
+    const file = await generateFile(ids, true);
+    await writeFile('./test.docx', file);
   } catch (error) {
     console.error(error);
   }

@@ -15,7 +15,7 @@ model Evidence {
   gid       String   @unique
 
   tag      String
-  cite     String
+  cite     String?
   summary  String?
   fulltext String?
   markup   String

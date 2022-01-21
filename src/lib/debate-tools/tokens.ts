@@ -35,7 +35,7 @@ export const tokensToMarkup = (textBlocks: TextBlock[]): string => {
 };
 
 export const tokensToDocument = async (textBlocks: TextBlock[]): Promise<Buffer> => {
-  const styles = await fs.readFile(`/Users/arvindb/dev/debate-cards/src/lib/debate-tools/styles.xml`, 'utf-8');
+  const styles = await fs.readFile(`./src/lib/debate-tools/styles.xml`, 'utf-8');
   const doc = new Document({
     externalStyles: styles,
     sections: [
