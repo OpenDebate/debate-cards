@@ -2,7 +2,6 @@ import addEvidence from 'app/actions/addEvidence';
 import { onAddFile } from 'app/actions/addFile';
 import { db, pipe } from 'app/lib';
 import { documentToTokens, extractCards, makeChildId } from 'app/lib/debate-tools';
-import { readFile } from 'fs/promises';
 import { Queue } from 'typescript-collections';
 
 const fileQueue = new Queue<string>();
@@ -17,7 +16,7 @@ const parseFile = async (gid: string) => {
   try {
     const cards = await pipe(
       (gid: string) => db.file.findUnique({ where: { gid } }),
-      (file) => readFile(file.path),
+      (file) => file.path,
       documentToTokens,
       extractCards,
     )(gid);

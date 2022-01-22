@@ -1,62 +1,89 @@
 import ch from 'cheerio';
-import { TextBlock, getStyles, getStyleByElement, simplifyTokens, tokensToDocument } from './';
+import {
+  TextBlock,
+  getStyleNameByXml,
+  TokenStyle,
+  SectionStyleName,
+  simplifyTokens,
+  tokensToDocument,
+  getOutlineLvlName,
+} from './';
 
-export const markupToDocument = async (markup: string): Promise<Buffer> => {
-  const tokens = markupToTokens(markup, { simplifed: true });
+export const markupToDocument = async (xml: string, styles: string): Promise<Buffer> => {
+  const tokens = markupToTokens(xml, styles, { simplified: true });
   const buffer = await tokensToDocument(tokens);
   return buffer;
 };
 
 interface TokensOption {
-  simplifed: boolean;
+  simplified: boolean;
 }
 
-export const markupToTokens = (markup: string, options?: TokensOption): TextBlock[] => {
-  const blocks = tokenize(markup);
-  if (options?.simplifed) {
-    const simplifedBlocks = blocks.map((block) => simplifyTokens(block));
-    return simplifedBlocks;
+export const markupToTokens = (document: string, styles: string, options?: TokensOption): TextBlock[] => {
+  const blocks = tokenize(document, styles);
+  if (options?.simplified) {
+    const simplifiedBlocks = blocks.map((block) => simplifyTokens(block));
+    return simplifiedBlocks;
   }
   return blocks;
 };
 
-const flattenTree = (tree: any[]): any[] => {
-  const flat = [];
-  const flatten = (nodes: string | any[], flattedNodes: any[]) => {
-    for (let index = 0; index < nodes.length; index += 1) {
-      flattedNodes.push(nodes[index]);
-      if (nodes[index].childNodes !== null) {
-        if (nodes[index].childNodes.length > 0) {
-          flatten(nodes[index].childNodes, flattedNodes);
-        }
-      }
-    }
-  };
-  flatten(tree, flat);
-  return flat;
+const getChild = (el, names: string[]) =>
+  names.reduce((acc, name) => {
+    return acc?.children?.find((child) => child.name === name);
+  }, el);
+
+// Extract what formatting applies to block of text
+const updateElFormating = (styleEl, current?: TokenStyle): TokenStyle => {
+  const formatting: TokenStyle = current ? { ...current } : { underline: false, strong: false, mark: false };
+  const styles = getChild(styleEl, ['w:rPr']);
+  if (!styles) return formatting;
+
+  const highlight = getChild(styles, ['w:highlight']);
+  const bold = getChild(styles, ['w:b']);
+  const underline = getChild(styles, ['w:u'])?.attribs['w:val'];
+
+  if (highlight) formatting.mark = true;
+  if (bold) formatting.strong = bold.attribs['w:val'] !== '0';
+  if (underline) formatting.underline = underline !== 'none';
+
+  return formatting;
 };
 
-const tokenize = (markup: string): TextBlock[] => {
-  const blockSelector = getStyles({ block: true }).join(', ');
-  const nodes: TextBlock[] = ch(blockSelector, markup)
+const getBlockFormat = (block): SectionStyleName => {
+  const stlyeNameFormat = getStyleNameByXml(getChild(block, ['w:pPr', 'w:pStyle'])?.attribs['w:val']);
+  if (stlyeNameFormat !== 'text') return stlyeNameFormat;
+
+  // Sometimes uses outline level instead of header
+  const outlineLvl = getChild(block, ['w:pPr', 'w:outlineLvl'])?.attribs['w:val'];
+  return getOutlineLvlName(parseInt(outlineLvl) + 1);
+};
+
+const tokenize = (xml: string, styles: string): TextBlock[] => {
+  const s = ch.load(styles, { xmlMode: true });
+  const d = ch.load(xml, { xmlMode: true });
+
+  // Generate map of style names to formatting from styles.xml
+  const xmlStyles: Record<string, TokenStyle> = s('w\\:style')
+    .get()
+    .reduce((acc, node) => {
+      acc[node.attribs['w:styleId']] = updateElFormating(node);
+      return acc;
+    }, {});
+
+  const tokens: TextBlock[] = d('w\\:p')
     .get()
     .map((block) => ({
-      format: ch(block).get()[0].name,
-      tokens: flattenTree(ch(block).contents().get())
-        .filter((node) => node.type === 'text')
+      format: getBlockFormat(block),
+      tokens: ch(block)
+        .children('w\\:r')
+        .get()
         .map((node) => ({
-          text: node.data,
-          format: ch(node)
-            .parentsUntil(blockSelector)
-            .get()
-            .map((el) => getStyleByElement(el.name)),
+          text: ch(node).text(),
+          // combine formatting defined in text block and formatting from style name
+          format: updateElFormating(node, xmlStyles[getChild(node, ['w:rPr', 'w:rStyle'])?.attribs['w:val']]),
         })),
     }));
-
-  const tokens = nodes.map(({ format, tokens }) => ({
-    format,
-    tokens: tokens.flatMap((node) => node.text.split('').map((text) => ({ text, format: node.format }))),
-  }));
 
   return tokens;
 };
