@@ -5,7 +5,7 @@
   "scripts": {
     "prestart": "npm run build",
     "start": "node ./build",
-    "dev": "ts-node-dev --respawn ./src/index.ts",
+    "dev": "ts-node-dev --respawn -r tsconfig-paths/register ./src/",
     "build": "tsc --project tsconfig.json && tscpaths -p tsconfig.json -s ./src -o ./build",
     "test": "jest"
   },
@@ -43,6 +43,7 @@
     "prettier": "^2.0.5",
     "prisma": "^3.8.1",
     "ts-node-dev": "^1.0.0-pre.50",
+    "tsconfig-paths": "^3.12.0",
     "tscpaths": "^0.0.9",
     "typescript": "^4.5.2"
   }
