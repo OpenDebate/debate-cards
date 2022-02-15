@@ -27,6 +27,32 @@ model Evidence {
   fileId Int?
 }
 
+model Round {
+  id        Int        @id @default(autoincrement())
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  gid       String     @unique
+  status    FileStatus @default(PENDING)
+
+  wiki   String
+  school String
+  team   String
+  side   Side
+
+  entryDate  DateTime
+  tournament String
+  roundNum   String
+  opponent   String
+  judge      String
+
+  roundReport String?
+  cites       String[]
+
+  openSourceUrl String?
+  openSource    File?   @relation(fields: [openSourceId], references: [gid])
+  openSourceId  String?
+}
+
 model File {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
@@ -42,6 +68,7 @@ model File {
 
   evidence Evidence[]
   tags     Tags[]
+  Rounds   Round[]
 }
 
 model EvidenceSet {
@@ -49,10 +76,15 @@ model EvidenceSet {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name  String
+  name  String @unique
   label String
 
   files File[]
+}
+
+enum Side {
+  AFF
+  NEG
 }
 
 enum FileStatus {

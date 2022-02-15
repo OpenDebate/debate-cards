@@ -1,6 +1,7 @@
 export * from './debate-tools';
 export * from './db';
 export * from './events';
+export * from './request';
 
 // XXX: hacky solution for typesafe async pipe
 type MaybePromise<T> = Promise<T> | T;
@@ -24,4 +25,15 @@ export function pipe<A, B, C, D, E>(
 // eslint-disable-next-line @typescript-eslint/ban-types
 export function pipe(...fns: Function[]) {
   return (x: any) => fns.reduce(async (y, fn) => fn(await y), x);
+}
+
+export function timeElapsed(startTime: number): string {
+  const elapsed = Date.now() - startTime;
+  const seconds = Math.floor(elapsed / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  const minuteString = (minutes % 60).toString().padStart(2, '0');
+  const secondsString = (seconds % 60).toString().padStart(2, '0');
+  return `${hours}:${minuteString}:${secondsString}`;
 }
