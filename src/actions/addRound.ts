@@ -17,7 +17,7 @@ export default async (pageUrl: string, roundNum: number, gid: string): Promise<R
   const existing = await db.round.findUnique({ where: { gid } });
   if (existing) return existing;
 
-  const rawProperties = await wikiRequest(`${pageUrl}/Caselist.RoundClass/${roundNum}`);
+  const rawProperties = await wikiRequest(`${pageUrl}/objects/Caselist.RoundClass/${roundNum}`);
   if (rawProperties.err) return { err: 'Not Found' };
 
   const properties = mapValues(
@@ -34,13 +34,16 @@ export default async (pageUrl: string, roundNum: number, gid: string): Promise<R
 
   const { round, cites: citeNum } = properties;
   const cites = await getCites(pageUrl, citeNum);
+  const openSourceUrl = properties.openSource
+    ? `${pageUrl}/attachments/${new URL(properties.openSource).pathname.split('/').pop()}`
+    : undefined;
 
   const data = {
     ...{ gid, wiki, school, team, side, cites },
     roundNum: round,
     entryDate: new Date(properties.entryDate),
     ...pick(properties, 'tournament', 'judge', 'opponent', 'roundReport'),
-    openSourceUrl: properties.openSource || undefined,
+    openSourceUrl,
     status: (properties.openSource ? 'PENDING' : 'PROCESSED') as FileStatus,
   };
 

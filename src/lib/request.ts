@@ -33,14 +33,10 @@ const sendRequest = async (
     response = null;
   try {
     // If download or normal request
-    if (request.filePath) {
-      const res = await requester.get(request.url, { responseType: 'arraybuffer' });
-      if (!res.data.length) throw { message: `${request.url} gave empty response`, retry: false };
-
-      response = res;
-    } else {
-      response = await requester.get(request.url, { params: { media: 'json' } });
-    }
+    response = await requester.get(
+      request.url,
+      request.filePath ? { responseType: 'arraybuffer' } : { params: { media: 'json' } },
+    );
   } catch (e) {
     if (e.isAxiosError) {
       const status = e.response?.status;

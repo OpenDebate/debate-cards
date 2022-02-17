@@ -6,8 +6,6 @@ import { countBy, sumBy } from 'lodash';
 import path from 'path';
 import { Queue } from 'typescript-collections';
 
-// Wait between downloads per wiki in ms
-const donwloadWait = 10 * 1000;
 interface Wiki {
   name: string;
   label: string;
@@ -85,7 +83,7 @@ class DebateWiki implements Wiki {
 
   async addRounds() {
     for (const round of this.roundData) {
-      const pageUrl = round.links[0].href.split('/').slice(0, -2).join('/');
+      const pageUrl = round.links[0].href.split('/').slice(0, -3).join('/');
       const data = await addRound(pageUrl, round.number, round.guid);
 
       if (data.hasOwnProperty('err')) {
@@ -134,7 +132,7 @@ class DebateWiki implements Wiki {
       });
       this.files.push(fileId);
     }
-    setTimeout(() => this.download(), donwloadWait);
+    setImmediate(() => this.download());
   }
 
   getStatus() {
@@ -142,8 +140,8 @@ class DebateWiki implements Wiki {
     return {
       label: this.label,
       downloaded: this.files.length,
-      processed: this.roundData ? this.processed.length : undefined,
-      loaded: this.roundData ? this.roundData.length : 0,
+      processed: this.roundData ? this.processed.length : 0,
+      loaded: this.roundData ? this.roundData.length : 'Loading...',
       skipped: errors.true || 0,
       errors: errors.false || 0,
     };
