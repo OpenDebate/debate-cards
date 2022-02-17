@@ -1,8 +1,13 @@
-import { EvidenceSet } from '@prisma/client';
+import { EvidenceSet, Round } from '@prisma/client';
 import addRound from 'app/actions/addRound';
-import { db, timeElapsed, wikiRequest } from 'app/lib';
-import { countBy, keyBy, sumBy } from 'lodash';
+import addFile from 'app/actions/addFile';
+import { db, RequestError, timeElapsed, wikiDowload, wikiRequest } from 'app/lib';
+import { countBy, sumBy } from 'lodash';
+import path from 'path';
+import { Queue } from 'typescript-collections';
 
+// Wait between downloads per wiki in ms
+const donwloadWait = 10 * 1000;
 interface Wiki {
   name: string;
   label: string;
@@ -10,22 +15,23 @@ interface Wiki {
   evidenceSet: EvidenceSet;
   roundData: any[];
   processed: any[];
+  files: string[];
   errors: any[];
 
   createEvidenceSet: () => Promise<void>;
   loadRounds: () => Promise<void>;
   addRounds: () => Promise<void>;
+  download: () => Promise<void>;
   getStatus: () => Partial<WikiStatus>;
 }
-
 interface WikiStatus {
   label: string;
+  downloaded: number;
   processed: number;
   loaded: number | string;
   skipped: number;
   errors: number;
 }
-
 class DebateWiki implements Wiki {
   static nameRegex = /^(?<type>[a-z]+)(?<year>\d+)?$/;
   static WIKITYPES = {
@@ -41,8 +47,10 @@ class DebateWiki implements Wiki {
   isOpenEv: boolean;
   evidenceSet: EvidenceSet;
 
+  downloadQueue: Queue<Round>;
   roundData: any[];
   processed: any[];
+  files: any[];
   errors: any[];
 
   constructor(wikiData) {
@@ -55,6 +63,8 @@ class DebateWiki implements Wiki {
     this.isOpenEv = this.name === 'openev';
     this.processed = [];
     this.errors = [];
+    this.files = [];
+    this.downloadQueue = new Queue<Round>();
   }
 
   async createEvidenceSet() {
@@ -78,17 +88,60 @@ class DebateWiki implements Wiki {
       const pageUrl = round.links[0].href.split('/').slice(0, -2).join('/');
       const data = await addRound(pageUrl, round.number, round.guid);
 
-      if (typeof data === 'string') {
-        const skipped = ['Not Found', 'Template'];
-        this.errors.push({ ...round, skipped: skipped.includes(data) });
-      } else this.processed.push(data);
+      if (data.hasOwnProperty('err')) {
+        let error = (data as { err: string }).err;
+        const skipped = ['Not Found', 'Template'].includes(error);
+        if (!skipped) console.error(data, round.links[0]);
+        this.errors.push({ ...round, error, skipped });
+      } else {
+        this.processed.push(data);
+        if ((data as Round).status === 'PENDING') this.downloadQueue.add(data as Round);
+      }
     }
+  }
+
+  async download() {
+    const round = this.downloadQueue.dequeue();
+    if (!round) return setTimeout(() => this.download(), 10000);
+    if (!round.openSourceUrl) return setImmediate(() => this.download());
+
+    const { wiki, school, team, side, tournament, roundNum } = round;
+    const fPath = path.join(process.env.DOCUMENT_PATH, wiki, school, team, side, `${tournament}-Round${roundNum}.docx`);
+    const file = await wikiDowload(round.openSourceUrl, fPath);
+
+    if (file.hasOwnProperty('err')) {
+      let error = (file as { err: RequestError }).err;
+      const skipped = error.message === 'Not docx' || error.status === 404;
+      const updated = await db.round.update({
+        where: { gid: round.gid },
+        data: { status: skipped ? 'PROCESSED' : 'ERROR' },
+      });
+
+      if (!skipped) {
+        console.error(`Failed to load file ${fPath} from ${round.openSourceUrl}`, error);
+        this.errors.push({ ...updated, error, skipped });
+      }
+    } else {
+      const fileId = await addFile({
+        name: path.basename(fPath),
+        path: fPath,
+        evidenceSet: { connect: { name: this.evidenceSet.name } },
+      });
+
+      await db.round.update({
+        where: { gid: round.gid },
+        data: { openSource: { connect: { gid: fileId } }, status: 'PROCESSED' },
+      });
+      this.files.push(fileId);
+    }
+    setTimeout(() => this.download(), donwloadWait);
   }
 
   getStatus() {
     const errors = countBy(this.errors, 'skipped');
     return {
       label: this.label,
+      downloaded: this.files.length,
       processed: this.roundData ? this.processed.length : undefined,
       loaded: this.roundData ? this.roundData.length : 0,
       skipped: errors.true || 0,
@@ -114,24 +167,35 @@ async function main() {
 
   console.log('Loading round data');
   const startTime = Date.now();
-  const interval = setInterval(() => {
+  const logger = setInterval(() => {
     console.clear();
     console.log('Time elapsed ' + timeElapsed(startTime));
     const statuses = wikis.map((wiki) => wiki.getStatus());
     const totals = {
-      label: 'Total',
+      downloaded: sumBy(statuses, 'downloaded'),
       processed: sumBy(statuses, 'processed'),
       loaded: sumBy(statuses, ({ loaded }) => (typeof loaded === 'string' ? 0 : loaded)),
       skipped: sumBy(statuses, 'skipped'),
       errors: sumBy(statuses, 'errors'),
     };
-    console.table(keyBy(statuses.concat(totals), 'label'));
+    const data = statuses.reduce(
+      (prev, cur) => {
+        prev[cur.label] = cur;
+        delete cur.label;
+        return prev;
+      },
+      { Total: totals },
+    );
+
+    console.table(data);
   }, 1000);
 
   await Promise.all(wikis.map((wiki) => wiki.loadRounds()));
+  wikis.forEach((wiki) => wiki.download());
   await Promise.all(wikis.map((wiki) => wiki.addRounds()));
 
-  clearInterval(interval);
+  clearInterval(logger);
+  console.log('Done!');
 }
 
 export default {

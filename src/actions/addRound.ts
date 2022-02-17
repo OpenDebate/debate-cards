@@ -8,17 +8,17 @@ const getCites = (pageUrl: string, citeNums: string): Promise<any> =>
     for (const num of citeNums.split(',')) {
       if (!num) continue;
       const cite = await wikiRequest(`${pageUrl}/Caselist.CitesClass/${num}/properties/Cites`);
-      if (cite) cites.push(cite.value);
+      if (!cite.err) cites.push(cite.value);
     }
     resolve(cites);
   });
 
-export default async (pageUrl: string, roundNum: number, gid: string): Promise<Round | string> => {
+export default async (pageUrl: string, roundNum: number, gid: string): Promise<Round | { err: string }> => {
   const existing = await db.round.findUnique({ where: { gid } });
   if (existing) return existing;
 
   const rawProperties = await wikiRequest(`${pageUrl}/Caselist.RoundClass/${roundNum}`);
-  if (!rawProperties) return 'Not Found';
+  if (rawProperties.err) return { err: 'Not Found' };
 
   const properties = mapValues(
     keyBy(rawProperties.properties, ({ name }) => name[0].toLowerCase() + name.slice(1)),
@@ -29,7 +29,8 @@ export default async (pageUrl: string, roundNum: number, gid: string): Promise<R
   const teamData = rawProperties.pageName.split(' ');
   const team = teamData.slice(0, -1).join(' '); // can have space in rare cases
   const side = teamData.slice(-1)[0].toUpperCase();
-  if (side === 'ROUNDTEMPLATE') return 'Template';
+  if (side === 'ROUNDTEMPLATE') return { err: 'Template' };
+  if (!(side === 'AFF' || side === 'NEG')) return { err: 'Invalid Side' };
 
   const { round, cites: citeNum } = properties;
   const cites = await getCites(pageUrl, citeNum);
