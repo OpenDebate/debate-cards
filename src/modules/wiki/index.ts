@@ -6,22 +6,6 @@ import { countBy, sumBy } from 'lodash';
 import path from 'path';
 import { Queue } from 'typescript-collections';
 
-interface Wiki {
-  name: string;
-  label: string;
-  isOpenEv: boolean;
-  evidenceSet: EvidenceSet;
-  roundData: any[];
-  processed: any[];
-  files: string[];
-  errors: any[];
-
-  createEvidenceSet: () => Promise<void>;
-  loadRounds: () => Promise<void>;
-  addRounds: () => Promise<void>;
-  download: () => Promise<void>;
-  getStatus: () => Partial<WikiStatus>;
-}
 interface WikiStatus {
   label: string;
   downloaded: number;
@@ -30,7 +14,8 @@ interface WikiStatus {
   skipped: number;
   errors: number;
 }
-class DebateWiki implements Wiki {
+
+class Wiki {
   static nameRegex = /^(?<type>[a-z]+)(?<year>\d+)?$/;
   static WIKITYPES = {
     hspolicy: 'High School Policy',
@@ -42,27 +27,26 @@ class DebateWiki implements Wiki {
   };
   name: string;
   label: string;
+  year: number;
   isOpenEv: boolean;
   evidenceSet: EvidenceSet;
 
-  downloadQueue: Queue<Round>;
-  roundData: any[];
-  processed: any[];
-  files: any[];
-  errors: any[];
+  downloadQueue = new Queue<any>();
+  loaded = [];
+  processed = [];
+  files: string[] = [];
+  errors = [];
 
-  constructor(wikiData) {
-    let { type, year } = DebateWiki.nameRegex.exec(wikiData.name)?.groups || {};
-    if (!type) throw new Error('Error parsing wiki name ' + wikiData.name);
-    type = DebateWiki.WIKITYPES[type];
+  constructor(name: string) {
+    let { type, year } = Wiki.nameRegex.exec(name)?.groups || {};
+    if (!type) throw new Error('Error parsing wiki name ' + name);
+    type = Wiki.WIKITYPES[type];
 
-    this.name = wikiData.name;
-    this.label = year ? `${type} 20${year}` : type;
-    this.isOpenEv = this.name === 'openev';
-    this.processed = [];
-    this.errors = [];
-    this.files = [];
-    this.downloadQueue = new Queue<Round>();
+    this.name = name;
+    this.isOpenEv = name.startsWith('openev');
+    this.year = +year;
+    if (!this.isOpenEv) this.year += 2000; // non openev just has last 2 digits
+    this.label = `${type} ${this.year}`;
   }
 
   async createEvidenceSet() {
@@ -73,16 +57,21 @@ class DebateWiki implements Wiki {
     });
   }
 
-  async loadRounds() {
-    this.roundData = (
-      await wikiRequest(`https://openev.debatecoaches.org/rest/wikis/${this.name}/classes/Caselist.RoundClass/objects`)
-    )?.objectSummaries;
+  async loadData() {
+    const base = `https://openev.debatecoaches.org/rest/wikis/`;
 
-    if (!this.roundData?.length) throw new Error(`Failed to load round data for ${this.name}`);
+    this.loaded = this.isOpenEv
+      ? (await wikiRequest(`${base}/openev/spaces/${this.year}/attachments?number=-1`))?.attachments
+      : (await wikiRequest(`${base}/${this.name}/classes/Caselist.RoundClass/objects`))?.objectSummaries;
+
+    if (!this.loaded) throw new Error('Failed to load round data for ' + this.name);
+
+    if (this.isOpenEv) this.loaded.forEach((attachment) => this.downloadQueue.add(attachment));
   }
 
-  async addRounds() {
-    for (const round of this.roundData) {
+  async processData() {
+    if (this.isOpenEv) return;
+    for (const round of this.loaded) {
       const pageUrl = round.links[0].href.split('/').slice(0, -3).join('/');
       const data = await addRound(pageUrl, round.number, round.guid);
 
@@ -99,24 +88,34 @@ class DebateWiki implements Wiki {
   }
 
   async download() {
-    const round = this.downloadQueue.dequeue();
-    if (!round) return setTimeout(() => this.download(), 10000);
-    if (!round.openSourceUrl) return setImmediate(() => this.download());
+    const download = this.downloadQueue.dequeue();
+    if (!download) return setTimeout(() => this.download(), 10000);
+    if (!this.isOpenEv && !download.openSourceUrl) return setImmediate(() => this.download());
 
-    const { wiki, school, team, side, tournament, roundNum } = round;
-    const fPath = path.join(process.env.DOCUMENT_PATH, wiki, school, team, side, `${tournament}-Round${roundNum}.docx`);
-    const file = await wikiDowload(round.openSourceUrl, fPath);
+    let fPath: string;
+    if (this.isOpenEv) {
+      fPath = path.join(process.env.DOCUMENT_PATH, this.name, download.name);
+    } else {
+      const { wiki, school, team, side, tournament, roundNum } = download;
+      fPath = path.join(process.env.DOCUMENT_PATH, wiki, school, team, side, `${tournament}-Round${roundNum}.docx`);
+    }
+
+    const url = this.isOpenEv ? download.links[1].href : download.openSourceUrl;
+    const file = await wikiDowload(url, fPath);
 
     if (file.hasOwnProperty('err')) {
       let error = (file as { err: RequestError }).err;
       const skipped = error.message === 'Not docx' || error.status === 404;
-      const updated = await db.round.update({
-        where: { gid: round.gid },
-        data: { status: skipped ? 'PROCESSED' : 'ERROR' },
-      });
+
+      const updated = this.isOpenEv
+        ? download
+        : await db.round.update({
+            where: { gid: download.gid },
+            data: { status: skipped ? 'PROCESSED' : 'ERROR' },
+          });
 
       if (!skipped) {
-        console.error(`Failed to load file ${fPath} from ${round.openSourceUrl}`, error);
+        console.error(`Failed to load file ${fPath} from ${url}`, error);
         this.errors.push({ ...updated, error, skipped });
       }
     } else {
@@ -126,22 +125,25 @@ class DebateWiki implements Wiki {
         evidenceSet: { connect: { name: this.evidenceSet.name } },
       });
 
-      await db.round.update({
-        where: { gid: round.gid },
-        data: { openSource: { connect: { gid: fileId } }, status: 'PROCESSED' },
-      });
+      if (!this.isOpenEv)
+        await db.round.update({
+          where: { gid: download.gid },
+          data: { openSource: { connect: { gid: fileId } }, status: 'PROCESSED' },
+        });
+
       this.files.push(fileId);
+      if (this.isOpenEv) this.processed.push(fileId);
     }
     setImmediate(() => this.download());
   }
 
-  getStatus() {
+  getStatus(): WikiStatus {
     const errors = countBy(this.errors, 'skipped');
     return {
       label: this.label,
       downloaded: this.files.length,
-      processed: this.roundData ? this.processed.length : 0,
-      loaded: this.roundData ? this.roundData.length : 'Loading...',
+      processed: this.processed.length,
+      loaded: this.loaded.length || 'Loading...',
       skipped: errors.true || 0,
       errors: errors.false || 0,
     };
@@ -150,17 +152,24 @@ class DebateWiki implements Wiki {
 
 async function loadWikis() {
   const wikiData = await wikiRequest(`https://openev.debatecoaches.org/rest/wikis/`);
-
   if (!wikiData?.wikis) throw new Error('Failed to load wikis');
-  const wikis: Wiki[] = wikiData.wikis.map((data) => new DebateWiki(data));
-  await Promise.all(wikis.map((wiki) => wiki.createEvidenceSet()));
 
+  const wikis: Wiki[] = wikiData.wikis
+    .filter((data) => data.name !== 'openev') // handle seperatley
+    .map((data) => new Wiki(data.name));
+
+  const openEvYears = (await wikiRequest('https://openev.debatecoaches.org/rest/wikis/openev/spaces')).spaces
+    .map((space) => space.name)
+    .filter((name: string) => name.startsWith('20'));
+  for (const year of openEvYears) wikis.push(new Wiki('openev' + year));
+
+  await Promise.all(wikis.map((wiki) => wiki.createEvidenceSet()));
   return wikis;
 }
 
 async function main() {
   console.log('Loading wikis');
-  const wikis = (await loadWikis()).filter((wiki) => !wiki.isOpenEv); // handle openev seperatley
+  const wikis = await loadWikis();
   console.log(`${wikis.length} wikis loaded`);
 
   console.log('Loading round data');
@@ -188,9 +197,9 @@ async function main() {
     console.table(data);
   }, 1000);
 
-  await Promise.all(wikis.map((wiki) => wiki.loadRounds()));
+  await Promise.all(wikis.map((wiki) => wiki.loadData()));
   wikis.forEach((wiki) => wiki.download());
-  await Promise.all(wikis.map((wiki) => wiki.addRounds()));
+  await Promise.all(wikis.map((wiki) => wiki.processData()));
 
   clearInterval(logger);
   console.log('Done!');

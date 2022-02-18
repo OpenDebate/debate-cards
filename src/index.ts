@@ -1,5 +1,6 @@
 import addFile from 'app/actions/addFile';
 import generateFile from 'app/actions/generateFile';
+import wiki from 'app/modules/wiki';
 import 'app/modules/parser';
 import { db } from './lib';
 import { readdir, writeFile } from 'fs/promises';
@@ -26,6 +27,7 @@ async function makeFile(id: number) {
 
 (async () => {
   try {
+    wiki.main();
   } catch (error) {
     console.error(error);
   }
