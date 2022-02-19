@@ -27,12 +27,14 @@ export const documentToMarkup = async (filepath: string): Promise<string> => {
 
 // Load xml by unzipping docx file, file is regex for file name to look for
 const loadXml = (path: string, file: RegExp): Promise<string> => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let data = '';
     const stream = fs.createReadStream(path);
     stream
+      .on('error', (err) => reject(err))
       .pipe(ParseOne(file))
       .on('data', (chunk) => (data += chunk))
+      .on('error', (err) => reject(err))
       .on('end', () => resolve(data));
   });
 };
