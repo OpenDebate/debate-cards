@@ -17,7 +17,7 @@ export const makeId = async (
   const sha256 = createHash('sha256');
   sha256.update(file as Buffer);
 
-  const fileId = sha256.digest('base64').replaceAll('/', '_').replaceAll('+', '-').slice(0, 6).toUpperCase();
+  const fileId = sha256.digest('base64').replaceAll('/', '_').replaceAll('+', '-').slice(0, 8).toUpperCase();
 
   const _makeChildId = (index: number) => makeChildId(fileId, index);
 
