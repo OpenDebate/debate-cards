@@ -7,7 +7,7 @@ const getCites = (pageUrl: string, citeNums: string): Promise<any> =>
     const cites = [];
     for (const num of citeNums.split(',')) {
       if (!num) continue;
-      const cite = await wikiRequest(`${pageUrl}/Caselist.CitesClass/${num}/properties/Cites`);
+      const cite = await wikiRequest(`${pageUrl}/objects/Caselist.CitesClass/${num}/properties/Cites`);
       if (!cite.err) cites.push(cite.value);
     }
     resolve(cites);
