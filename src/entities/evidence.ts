@@ -1,3 +1,3 @@
-import { Evidence } from 'app/generated/prisma';
+import { Evidence } from '@prisma/client';
 
 export { Evidence };

@@ -100,7 +100,7 @@ export const getStyleNameByXml = (elXmlName: string): SectionStyleName => {
   return (findKey(styleMap, predicate) ?? 'text') as SectionStyleName;
 };
 
-export const getStyleNameByOutlineLvl = (outlineLvl: number): SectionStyleName => {
+export const getOutlineLvlName = (outlineLvl: number): SectionStyleName => {
   const predicate = ({ docxStyles = null }) => outlineLvl === docxStyles?.outlineLevel;
   return (findKey(styleMap, predicate) ?? 'text') as SectionStyleName;
 };

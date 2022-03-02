@@ -1,5 +1,4 @@
 import ch from 'cheerio';
-import {} from '..';
 import {
   TextBlock,
   getStyleNameByXml,
@@ -7,6 +6,7 @@ import {
   SectionStyleName,
   simplifyTokens,
   tokensToDocument,
+  getOutlineLvlName,
   getStyleNameByOutlineLvl,
 } from './';
 
@@ -57,7 +57,7 @@ const getBlockFormat = (block): SectionStyleName => {
 
   // Sometimes uses outline level instead of header
   const outlineLvl = getChild(block, ['w:pPr', 'w:outlineLvl'])?.attribs['w:val'];
-  return getStyleNameByOutlineLvl(parseInt(outlineLvl) + 1);
+  return getOutlineLvlName(parseInt(outlineLvl) + 1);
 };
 
 const tokenize = (xml: string, styles: string): TextBlock[] => {

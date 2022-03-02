@@ -1,4 +1,4 @@
-import { Prisma } from 'app/generated/prisma';
+import { Prisma } from '@prisma/client';
 import { db } from 'app/lib';
 import { omit } from 'lodash';
 

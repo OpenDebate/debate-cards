@@ -1,3 +1,3 @@
-import { File } from 'app/generated/prisma';
+import { File } from '@prisma/client';
 
 export { File };

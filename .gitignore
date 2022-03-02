@@ -6,7 +6,7 @@ yarn-error.log
 .env
 .DS_Store
 prisma/dev.*
-src/generated/prisma
+prisma/migrations
 .yarn/*
 !.yarn/cache
 !.yarn/patches

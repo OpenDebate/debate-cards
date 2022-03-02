@@ -1,7 +1,7 @@
 import { makeId } from 'app/lib/debate-tools';
 import { db, TypedEvent } from 'app/lib';
 import { readFile } from 'fs/promises';
-import { Prisma } from 'app/generated/prisma';
+import { Prisma } from '@prisma/client';
 
 // interface AddFileData = Omit;
 type ExcludedFileFields = 'gid' | 'status';

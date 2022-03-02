@@ -10,13 +10,13 @@
     "test": "jest"
   },
   "dependencies": {
-    "@prisma/client": "3.0.2",
+    "@prisma/client": "^3.8.1",
     "cheerio": "1.0.0-rc.3",
     "docx": "^6.0.3",
     "dotenv": "^6.2.0",
     "lodash": "^4.17.15",
-    "sqlite3": "^5.0.0",
     "unzipper": "^0.10.11"
+    "sqlite3": "^5.0.0",
     "mammoth": "^1.4.19",
     "node-pandoc-promise": "^0.0.6",
     "p-ratelimit": "^1.0.1",
@@ -46,7 +46,7 @@
     "eslint-plugin-prettier": "^3.1.4",
     "jest": "^26.6.3",
     "prettier": "^2.0.5",
-    "prisma": "3.0.2",
+    "prisma": "^3.8.1",
     "ts-node-dev": "^1.0.0-pre.50",
     "tscpaths": "^0.0.9",
     "typescript": "^4.5.2"

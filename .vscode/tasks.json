@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "build",
+			"group": "build",
+			"problemMatcher": [],
+			"label": "npm: build",
+			"detail": "tsc --project tsconfig.json && tscpaths -p tsconfig.json -s ./src -o ./build"
+		}
+	]
+}

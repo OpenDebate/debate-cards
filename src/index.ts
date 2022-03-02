@@ -1,28 +1,32 @@
-import { documentToTokens, tokensToMarkup, extractCards, tokensToDocument } from 'app/lib';
-import { promises as fs } from 'fs';
-(async () => {
-  const SAMPLE_FILE = './file.docx';
-  try {
-    const tokens = await documentToTokens(SAMPLE_FILE);
-    fs.writeFile('./data/tokens.json', JSON.stringify(tokens, null, 4));
-    const markup = tokensToMarkup(tokens);
-    const cards = extractCards(tokens);
-    await fs.writeFile(
-      './output-doc.html',
-      `
-      <style>
-        em {
-          text-decoration: underline;
-          font-style: normal;
-        }
-      </style>
-      ${markup}
-    `,
-    );
-    fs.writeFile('./output-doc.docx', await tokensToDocument(tokens));
+import addFile from 'app/actions/addFile';
+import generateFile from 'app/actions/generateFile';
+import 'app/modules/parser';
+import { db } from './lib';
+import { readdir, writeFile } from 'fs/promises';
 
-    console.log(cards);
-    fs.writeFile('./data/cards.json', JSON.stringify(cards, null, 4));
+async function loadDir(dir: string) {
+  const files = (await readdir(dir)).map((file) => ({
+    name: file,
+    path: `${dir}/${file}`,
+  }));
+
+  for (const file of files) await addFile(file);
+}
+
+async function makeFile(id: number) {
+  const ids = (
+    await db.evidence.findMany({
+      where: { fileId: id },
+    })
+  ).map((card) => card.id);
+  const file = await generateFile(ids, true);
+  await writeFile('./test.docx', file);
+  console.log('File built');
+}
+
+(async () => {
+  try {
+ 
   } catch (error) {
     console.error(error);
   }
