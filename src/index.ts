@@ -26,6 +26,7 @@ async function makeFile(id: number) {
 
 (async () => {
   try {
+ 
   } catch (error) {
     console.error(error);
   }

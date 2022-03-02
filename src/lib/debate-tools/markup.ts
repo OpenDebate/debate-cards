@@ -7,6 +7,7 @@ import {
   simplifyTokens,
   tokensToDocument,
   getOutlineLvlName,
+  getStyleNameByOutlineLvl,
 } from './';
 
 export const markupToDocument = async (xml: string, styles: string): Promise<Buffer> => {
