@@ -81,7 +81,7 @@ class Wiki {
         if (!skipped) console.error(data, round.links[0]);
         this.errors.push({ ...round, error, skipped });
       } else {
-        this.processed.push(data);
+        this.processed.push((data as Round).gid);
         if ((data as Round).status === 'PENDING') this.downloadQueue.add(data as Round);
       }
     }
