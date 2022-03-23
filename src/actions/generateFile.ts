@@ -37,13 +37,9 @@ const flattenLevel = (data: Evidence[], level: number): TextBlock[] => {
 };
 
 export default async (ids: number[], keepHeadings: boolean): Promise<Buffer> => {
-  let evidence = await db.evidence.findMany({
-    where: {
-      id: { in: ids },
-    },
-  });
+  const evidence = await db.evidence.findMany({ where: { id: { in: ids } } });
 
-  let tokens: TextBlock[] = flattenLevel(evidence, keepHeadings ? 1 : 4);
+  const tokens: TextBlock[] = flattenLevel(evidence, keepHeadings ? 1 : 4);
   onGenerateFile.emit({ ids });
   return await tokensToDocument(tokens);
 };
