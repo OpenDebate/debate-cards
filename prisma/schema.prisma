@@ -26,6 +26,7 @@ model Evidence {
 
   file   File? @relation(fields: [fileId], references: [id])
   fileId Int?
+  parent Int? // Null if unprocessed, same as id if no parent
 }
 
 model File {
