@@ -10,7 +10,7 @@ import fs from 'fs';
 export const documentToTokens = async (filepath: string): Promise<TextBlock[]> => {
   const document = await loadXml(filepath, /document\.xml$/);
   const styles = await loadXml(filepath, /styles\.xml$/);
-  const tokens = markupToTokens(document, styles, { simplified: true });
+  const tokens = await markupToTokens(document, styles, { simplified: true });
   return tokens;
 };
 
@@ -31,10 +31,10 @@ const loadXml = (path: string, file: RegExp): Promise<string> => {
     let data = '';
     const stream = fs.createReadStream(path);
     stream
-      .on('error', (err) => reject(err))
+      .on('error', reject)
       .pipe(ParseOne(file))
       .on('data', (chunk) => (data += chunk))
-      .on('error', (err) => reject(err))
+      .on('error', reject)
       .on('end', () => resolve(data));
   });
 };

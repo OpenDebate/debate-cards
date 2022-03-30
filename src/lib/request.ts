@@ -58,10 +58,10 @@ export const wikiRequest = (url: string): Promise<any> =>
 
 export const wikiDowload = async (url: string, filePath: string): Promise<Uint8Array | { err: RequestError }> => {
   if (!url.includes('.docx')) return { err: { message: 'Not docx', retry: false } };
-  let data = await new Promise((resolve: (value: Uint8Array | { err: RequestError }) => void) =>
+  const data = await new Promise((resolve: (value: Uint8Array | { err: RequestError }) => void) =>
     requestQueue.enqueue({ url, filePath, status: 'PENDING', callback: resolve }),
   );
-  if (!data.hasOwnProperty('err')) {
+  if (!('err' in data)) {
     await mkdir(dirname(filePath), { recursive: true });
     await writeFile(filePath, data as Uint8Array);
   }

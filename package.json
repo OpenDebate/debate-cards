@@ -15,9 +15,11 @@
     "cheerio": "1.0.0-rc.3",
     "docx": "^6.0.3",
     "dotenv": "^6.2.0",
+    "htmlparser2": "^7.2.0",
     "lodash": "^4.17.15",
+    "redis": "^4.0.4",
+    "typescript-collections": "^1.3.3",
     "unzipper": "^0.10.11"
-    "typescript-collections": "^1.3.3"
   },
   "devDependencies": {
     "@types/cheerio": "^0.22.21",

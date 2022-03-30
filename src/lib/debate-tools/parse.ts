@@ -24,10 +24,7 @@ export const getIndexesWith = (blocks: TextBlock[], styles: StyleName[]): number
 };
 
 const getLastBlockWith = (blocks: TextBlock[], anchor: number, styles: StyleName[]): TextBlock => {
-  let ret;
-  const range = [...Array(anchor).keys()];
-  range.forEach((idx) => (ret = styles.includes(blocks[idx].format) ? blocks[idx] : ret));
-  return ret;
+  for (let i = anchor; i >= 0; i--) if (styles.includes(blocks[i].format)) return blocks[i];
 };
 
 export const getBlocksUntil = (blocks: TextBlock[], anchor: number, styles: StyleName[]): TextBlock[] => {
@@ -51,6 +48,7 @@ const parseCard = (doc: TextBlock[], anchor = 0, idx: number) => {
   return {
     tag: extractText([tag]),
     cite: extractText([cite], ['strong']),
+    fullcite: extractText([cite]),
     pocket: extractHeading('pocket'),
     hat: extractHeading('hat'),
     block: extractHeading('block'),
