@@ -46,7 +46,15 @@ async function setParent({ text, id }: DedupTask) {
   return updateParents(uniq(updates), parent);
 }
 
-onAddEvidence.on((data) => evidenceQueue.enqueue(data));
+onAddEvidence.on(({ gid }) =>
+  db.evidence.findUnique({ where: { gid } }).then((evidence) =>
+    evidenceQueue.enqueue({
+      id: evidence.id,
+      text: evidence.fulltext,
+    }),
+  ),
+);
+
 const drain = () => {
   // TODO: Add chunks of unduplicated cards from db if queue is empty
   if (evidenceQueue.size() === 0) setTimeout(drain, 1000);
@@ -54,7 +62,6 @@ const drain = () => {
   else {
     const task = evidenceQueue.dequeue();
     const promise = setParent(task);
-    promise.then(task.callback);
     promise.then(drain);
   }
 };

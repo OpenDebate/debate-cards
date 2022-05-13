@@ -7,7 +7,6 @@ type CardMatches = Record<number, { start: number; end: number }>;
 export interface DedupTask {
   text: string;
   id: number;
-  callback: (value: unknown) => void;
 }
 
 export const getSentences = (text: string, cutoff = 20): string[] | undefined => {
