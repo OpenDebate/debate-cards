@@ -22,7 +22,8 @@ const parseFile = async (gid: string) => {
       extractCards,
     )(gid);
 
-    await Promise.all(cards.map((card, i) => addEvidence({ ...card, gid: makeChildId(gid, +i), file: { gid } })));
+    // await Promise.all(cards.map((card, i) => addEvidence({ ...card, gid: makeChildId(gid, +i), file: { gid } })));
+    for (const card of cards) await addEvidence({ ...card, gid: makeChildId(gid, card.index), file: { gid } });
     await db.file.update({ where: { gid }, data: { status: 'PROCESSED' } });
   } catch (e) {
     console.error(e);
@@ -31,7 +32,7 @@ const parseFile = async (gid: string) => {
 };
 
 const drain = () => {
-  if (fileQueue.size() === 0) setTimeout(drain, 10000);
+  if (fileQueue.size() === 0) setTimeout(drain, 100);
   else parseFile(fileQueue.dequeue()).then(() => drain());
 };
 

@@ -7,9 +7,31 @@ import { Queue } from 'typescript-collections';
 const evidenceQueue = new Queue<DedupTask>();
 
 // Update parents in database and redis, dont need to actaully wait for database response
-function updateParents(cardIds: string[], parentId: number) {
+async function updateParents(cardIds: string[], parentId: number) {
   setRedisParents(cardIds, parentId);
-  return db.evidence.updateMany({ where: { id: { in: cardIds.map(Number) } }, data: { parent: parentId } });
+  const bucket = await db.evidenceBucket.upsert({
+    where: { rootId: parentId },
+    create: { rootId: parentId },
+    update: {
+      count: {
+        increment: cardIds.length,
+      },
+    },
+  });
+  return db.evidence.updateMany({
+    where: { id: { in: cardIds.map(Number) } },
+    data: {
+      bucketId: bucket.id,
+    },
+  });
+  // db.evidenceBucket.update({
+  //   where: { id: bucket.id },
+  //   data: {
+  //     evidence: {
+  //       connect: cardIds.map((id) => ({ id: +id })),
+  //     },
+  //   },
+  // });
 }
 
 async function setParent({ text, id }: DedupTask) {
@@ -63,6 +85,7 @@ const drain = () => {
     const task = evidenceQueue.dequeue();
     const promise = setParent(task);
     promise.then(drain);
+    promise.catch((e) => console.error(e));
   }
 };
 

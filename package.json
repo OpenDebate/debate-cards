@@ -5,7 +5,7 @@
   "scripts": {
     "prestart": "npm run build",
     "start": "node ./build",
-    "dev": "ts-node-dev --respawn ./src/index.ts",
+    "dev": "ts-node-dev --respawn -r tsconfig-paths/register ./src/",
     "build": "tsc --project tsconfig.json && tscpaths -p tsconfig.json -s ./src -o ./build",
     "test": "jest"
   },
