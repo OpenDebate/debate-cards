@@ -1,0 +1,77 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Evidence {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  gid       String   @unique
+
+  tag      String
+  cite     String?
+  fullcite String?
+  summary  String?
+  spoken   String?
+  fulltext String?
+  markup   String
+  pocket   String?
+  hat      String?
+  block    String?
+
+  file   File? @relation(fields: [fileId], references: [id])
+  fileId Int?
+  parent Int? // Null if unprocessed, same as id if no parent
+}
+
+model File {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  gid       String   @unique
+
+  name   String
+  path   String
+  status FileStatus @default(PENDING)
+
+  evidenceSet   EvidenceSet? @relation(fields: [evidenceSetId], references: [id])
+  evidenceSetId Int?
+
+  evidence Evidence[]
+  tags     Tags[]
+}
+
+model EvidenceSet {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name  String
+  label String
+
+  files File[]
+}
+
+enum FileStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  ERROR
+}
+
+model Tags {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name  String
+  label String
+
+  file   File @relation(fields: [fileId], references: [id])
+  fileId Int
+}

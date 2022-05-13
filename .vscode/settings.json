@@ -1,0 +1,5 @@
+{
+  "path-autocomplete.pathMappings": {
+    "@": "${folder}/",
+  }
+}
