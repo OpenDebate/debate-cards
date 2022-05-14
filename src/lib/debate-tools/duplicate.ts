@@ -3,10 +3,6 @@ import { createHash } from 'crypto';
 import { EDGE_TOLERANCE, INSIDE_TOLERANCE, SENTENCE_REGEX } from 'app/constants';
 
 type CardMatches = Record<number, { start: number; end: number }>;
-export interface DedupTask {
-  text: string;
-  id: number;
-}
 
 export const getSentences = (text: string, cutoff = 20): string[] | undefined => {
   return text

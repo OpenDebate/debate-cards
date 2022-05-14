@@ -1,10 +1,10 @@
 import { db } from 'app/lib';
-import { getSentences, Sentence, Info, Children, getMatching, DedupTask } from 'app/lib';
+import { getSentences, Sentence, Info, Children, getMatching } from 'app/lib';
 import { onAddEvidence } from 'app/actions/addEvidence';
 import { filter, min, uniq } from 'lodash';
 import { Queue } from 'typescript-collections';
 
-const evidenceQueue = new Queue<DedupTask>();
+const evidenceQueue = new Queue<{ gid: string }>();
 
 // Update parents in database and redis, dont need to actaully wait for database response
 async function updateParents(cardIds: string[], parentId: number) {
@@ -24,19 +24,10 @@ async function updateParents(cardIds: string[], parentId: number) {
       bucketId: bucket.id,
     },
   });
-  // db.evidenceBucket.update({
-  //   where: { id: bucket.id },
-  //   data: {
-  //     evidence: {
-  //       connect: cardIds.map((id) => ({ id: +id })),
-  //     },
-  //   },
-  // });
 }
 
-async function setParent({ text, id }: DedupTask) {
+async function setParent(id: number, sentences: string[]) {
   const updates = [id.toString()];
-  const sentences = getSentences(text);
   if (sentences.length) Info.set(id, 'l', sentences.length);
 
   // Get matching sentences
@@ -60,24 +51,18 @@ async function setParent({ text, id }: DedupTask) {
   return updateParents(uniq(updates), parent);
 }
 
-onAddEvidence.on(({ gid }) =>
-  db.evidence.findUnique({ where: { gid } }).then((evidence) =>
-    evidenceQueue.enqueue({
-      id: evidence.id,
-      text: evidence.fulltext,
-    }),
-  ),
-);
+onAddEvidence.on((data) => evidenceQueue.enqueue(data));
 
-const drain = () => {
+const drain = async () => {
   // TODO: Add chunks of unduplicated cards from db if queue is empty
   if (evidenceQueue.size() === 0) setTimeout(drain, 1000);
   // Dosent actually wait for parent to be set, just till commands are sent
   else {
-    const task = evidenceQueue.dequeue();
-    const promise = setParent(task);
-    promise.then(drain);
-    promise.catch((e) => console.error(e));
+    const { gid } = evidenceQueue.dequeue();
+    const { id, fulltext } = await db.evidence.findUnique({ where: { gid }, select: { id: true, fulltext: true } });
+    const sentences = getSentences(fulltext) ?? [];
+
+    setParent(id, sentences).catch(console.error).finally(drain);
   }
 };
 
