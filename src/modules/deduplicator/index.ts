@@ -1,7 +1,7 @@
-import { db } from 'app/lib';
+import { db, pipe } from 'app/lib';
 import { getSentences, Sentence, Info, Children, getMatching } from 'app/lib';
 import { onAddEvidence } from 'app/actions/addEvidence';
-import { filter, min, uniq } from 'lodash';
+import { min, uniq } from 'lodash';
 import { Queue } from 'typescript-collections';
 
 const evidenceQueue = new Queue<{ gid: string }>();
@@ -28,23 +28,22 @@ async function updateParents(cardIds: string[], parentId: number) {
 
 async function setParent(id: number, sentences: string[]) {
   const updates = [id.toString()];
-  if (sentences.length) Info.set(id, 'l', sentences.length);
+  if (sentences.length) Info.set(id, 'length', sentences.length);
 
-  // Get matching sentences
-  const existing = filter(await Promise.all(sentences.map(Sentence.get)));
-  // Get the parents of all the matches
-  const existingParents = uniq(await Promise.all(existing.map((card) => Info.get(+card, 'p'))));
-  // Try to filter coincidental matches
-  const matching = await getMatching(filter(existingParents));
+  // Get matching cards
+  const matching = await pipe(
+    (sentences: string[]) => Promise.all(sentences.map(Sentence.get)),
+    (existing) => Promise.all(existing.map((card) => Info.get(card, 'parent'))),
+    getMatching,
+  )(sentences);
+
   const parent = min(matching) ?? id;
+  const toMerge = matching.filter((card) => card !== parent);
 
   // In rare case multiple different parents were matched, merge cards and update parents
-  if (matching.length > 1) {
-    await Promise.all(
-      matching
-        .filter((card) => card !== parent)
-        .map((card) => Children.get(card).then((children) => updates.push(...children))),
-    );
+  if (toMerge.length) {
+    const children = await Promise.all(toMerge.map(Children.get));
+    updates.push(...children.flat());
   }
 
   sentences.forEach((sentence) => Sentence.set(sentence, parent));
