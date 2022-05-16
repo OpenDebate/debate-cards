@@ -24,10 +24,7 @@ export const getIndexesWith = (blocks: TextBlock[], styles: StyleName[]): number
 };
 
 const getLastBlockWith = (blocks: TextBlock[], anchor: number, styles: StyleName[]): TextBlock => {
-  let ret;
-  const range = [...Array(anchor).keys()];
-  range.forEach((idx) => (ret = styles.includes(blocks[idx].format) ? blocks[idx] : ret));
-  return ret;
+  for (let i = anchor; i >= 0; i--) if (styles.includes(blocks[i].format)) return blocks[i];
 };
 
 export const getBlocksUntil = (blocks: TextBlock[], anchor: number, styles: StyleName[]): TextBlock[] => {
@@ -44,13 +41,27 @@ const parseCard = (doc: TextBlock[], anchor = 0, idx: number) => {
     assume second block element is the cite,
     everything left is the card body 
    */
-  const [tag, cite, ...body] = card;
+  const tag = card.slice(0, 1);
+  const cite = card.slice(1, 2);
+  const body = card.slice(2);
 
   const extractHeading = (name: StyleName) => extractText([getLastBlockWith(doc, anchor, [name])]);
+  const shortCite = extractText(cite, ['strong']);
+  /* 
+    Quite a few documents have the bolded part of cite in seperate block than rest of cite
+    The cite in seperate block usually contains the author's name at the start, if that is detected move the first block of the body to the cite
+  */
+  if (body.length > 1) {
+    const start = extractText([body[0]]).slice(0, 50);
+    if (shortCite.split(' ').find((word) => start.includes(word))) cite.push(...body.splice(0, 1));
+  }
+  // If card has no body, move anything detected as cite to tag
+  if (!body.length && cite) tag.push(...cite.splice(0, 1));
 
   return {
-    tag: extractText([tag]),
-    cite: extractText([cite], ['strong']),
+    tag: extractText(tag),
+    cite: shortCite,
+    fullcite: extractText(cite),
     pocket: extractHeading('pocket'),
     hat: extractHeading('hat'),
     block: extractHeading('block'),

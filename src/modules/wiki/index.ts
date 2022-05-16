@@ -38,15 +38,14 @@ class Wiki {
   errors = [];
 
   constructor(name: string) {
-    let { type, year } = Wiki.nameRegex.exec(name)?.groups || {};
+    const { type, year } = Wiki.nameRegex.exec(name)?.groups || {};
     if (!type) throw new Error('Error parsing wiki name ' + name);
-    type = Wiki.WIKITYPES[type];
 
     this.name = name;
     this.isOpenEv = name.startsWith('openev');
     this.year = +year;
     if (!this.isOpenEv) this.year += 2000; // non openev just has last 2 digits
-    this.label = `${type} ${this.year}`;
+    this.label = `${Wiki.WIKITYPES[type]} ${this.year}`;
   }
 
   async createEvidenceSet() {
@@ -75,8 +74,8 @@ class Wiki {
       const pageUrl = round.links[0].href.split('/').slice(0, -3).join('/');
       const data = await addRound(pageUrl, round.number, round.guid);
 
-      if (data.hasOwnProperty('err')) {
-        let error = (data as { err: string }).err;
+      if ('err' in data) {
+        const error = (data as { err: string }).err;
         const skipped = ['Not Found', 'Template'].includes(error);
         if (!skipped) console.error(data, round.links[0]);
         this.errors.push({ ...round, error, skipped });
@@ -103,8 +102,8 @@ class Wiki {
     const url = this.isOpenEv ? download.links[1].href : download.openSourceUrl;
     const file = await wikiDowload(url, fPath);
 
-    if (file.hasOwnProperty('err')) {
-      let error = (file as { err: RequestError }).err;
+    if ('err' in file) {
+      const error = (file as { err: RequestError }).err;
       const skipped = error.message === 'Not docx' || error.status === 404;
 
       const updated = this.isOpenEv
@@ -167,7 +166,7 @@ async function loadWikis() {
   return wikis;
 }
 
-async function main() {
+async function main(): Promise<void> {
   console.log('Loading wikis');
   const wikis = await loadWikis();
   console.log(`${wikis.length} wikis loaded`);
