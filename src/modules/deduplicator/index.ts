@@ -1,62 +1,98 @@
-import { db } from 'app/lib';
-import { getSentences, Sentence, Info, getChildren, getMatching, setRedisParents, DedupTask } from 'app/lib';
+import { db, pipe, Lock } from 'app/lib';
+import { getSentences, Sentence, Info, Children, getMatching } from 'app/lib';
+import { CONCURRENT_DEDUPLICATION } from 'app/constants';
 import { onAddEvidence } from 'app/actions/addEvidence';
-import { filter, min, uniq } from 'lodash';
+import { min, uniq } from 'lodash';
 import { Queue } from 'typescript-collections';
 
-const evidenceQueue = new Queue<DedupTask>();
+const evidenceQueue = new Queue<{ gid: string }>();
+const sentenceLock: Record<string, Lock> = {};
+const mergeLock: Record<number, Lock> = {};
 
-// Update parents in database and redis, dont need to actaully wait for database response
-function updateParents(cardIds: string[], parentId: number) {
-  setRedisParents(cardIds, parentId);
-  return db.evidence.updateMany({ where: { id: { in: cardIds.map(Number) } }, data: { parent: parentId } });
+// Update parents in database and redis
+async function updateParents(cardIds: string[], parentId: number) {
+  Children.set(parentId, cardIds);
+  const bucket = await db.evidenceBucket.upsert({
+    where: { rootId: parentId },
+    create: { rootId: parentId },
+    update: { count: { increment: cardIds.length } },
+  });
+  return db.evidence.updateMany({
+    where: { id: { in: cardIds.map(Number) } },
+    data: { bucketId: bucket.id },
+  });
 }
 
-async function setParent({ text, id }: DedupTask) {
-  let parent = id;
+async function setParent(id: number, text: string) {
   const updates = [id.toString()];
+  const sentences = getSentences(text) ?? [];
 
-  const sentences = getSentences(text);
-  if (!sentences?.length) return updateParents(updates, parent);
-
-  const existing = await Promise.all(sentences.map(Sentence.get));
-  const matching = filter(await getMatching(existing));
-
-  Info.set(id, 'l', sentences.length);
-  if (matching.length) {
-    // Get the parents of all the matches, use set to make sure they are unique
-    const matchParents = uniq(await Promise.all(matching.map((card) => Info.get(+card, 'p'))));
-
-    // If all matches have the same parent just set as parent
-    if (matchParents.length === 1) parent = +matchParents[0];
-    else {
-      // In rare case multiple different parents were matched, merge cards and update parents
-      parent = +min(matchParents);
-
-      await Promise.all(
-        matchParents
-          .filter((card) => +card !== parent)
-          .map((card) => getChildren(card).then((children) => updates.push(...children))),
-      );
+  const unlockSentences = () => {
+    // Unlock for any cards waiting on sentence, then remove lock for future cards
+    for (const sentence of sentences) {
+      sentenceLock[sentence]?.unlock();
+      delete sentenceLock[sentence];
     }
+  };
+
+  let matching: number[];
+  try {
+    // If any sentences in this card are being processed wait for them to finish, then mark sentneces as being procsessed
+    for (const sentence of sentences) {
+      await sentenceLock[sentence]?.promise;
+      sentenceLock[sentence] = new Lock();
+    }
+    if (sentences.length) Info.set(id, 'length', sentences.length);
+
+    // Get matching cards
+    matching = await pipe(
+      (sentences: string[]) => Promise.all(sentences.map(Sentence.get)),
+      (existing) => Promise.all(existing.map((card) => Info.get(card, 'parent'))),
+      getMatching,
+    )(sentences);
+  } catch (e) {
+    unlockSentences();
+    throw e;
   }
 
-  // Commands will be sent in order so dont need to wait for respones
-  sentences.forEach((sentence) => Sentence.set(sentence, parent));
-  return updateParents(uniq(updates), parent);
+  const parent = min(matching) ?? id;
+  const mLock = (mergeLock[parent] = new Lock());
+  const toMerge = matching.filter((card) => card !== parent);
+
+  try {
+    // In rare case multiple different parents were matched, merge cards and update parents
+    if (toMerge.length) {
+      // If cards are being added to a given bucket, wait to merge that bucket
+      for (const card of toMerge) await mergeLock[card]?.promise;
+      const children = await Promise.all(toMerge.map(Children.get));
+      updates.push(...children.flat());
+    }
+
+    sentences.forEach((sentence) => Sentence.set(sentence, parent));
+    await updateParents(uniq(updates), parent);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    unlockSentences();
+    // If lock on parent hasnt been overwritten, unlock it
+    if (mergeLock[parent] === mLock) {
+      mergeLock[parent]?.unlock();
+      delete mergeLock[parent];
+    }
+  }
 }
 
 onAddEvidence.on((data) => evidenceQueue.enqueue(data));
-const drain = () => {
+
+const drain = async () => {
   // TODO: Add chunks of unduplicated cards from db if queue is empty
   if (evidenceQueue.size() === 0) setTimeout(drain, 1000);
-  // Dosent actually wait for parent to be set, just till commands are sent
   else {
-    const task = evidenceQueue.dequeue();
-    const promise = setParent(task);
-    promise.then(task.callback);
-    promise.then(drain);
+    const { gid } = evidenceQueue.dequeue();
+    const { id, fulltext } = await db.evidence.findUnique({ where: { gid }, select: { id: true, fulltext: true } });
+
+    setParent(id, fulltext).catch(console.error).finally(drain);
   }
 };
 
-drain();
+for (let i = 0; i < CONCURRENT_DEDUPLICATION; i++) drain();

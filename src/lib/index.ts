@@ -24,6 +24,7 @@ export function pipe<A, B, C, D, E>(
 // extend to a reasonable amount of arguments
 // eslint-disable-next-line @typescript-eslint/ban-types
 export function pipe(...fns: Function[]) {
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   return (x: any) => fns.reduce(async (y, fn) => fn(await y), x);
 }
 
@@ -36,4 +37,12 @@ export function timeElapsed(startTime: number): string {
   const minuteString = (minutes % 60).toString().padStart(2, '0');
   const secondsString = (seconds % 60).toString().padStart(2, '0');
   return `${hours}:${minuteString}:${secondsString}`;
+}
+
+export class Lock {
+  unlock: () => void;
+  promise: Promise<void>;
+  constructor() {
+    this.promise = new Promise((resolve) => (this.unlock = resolve));
+  }
 }

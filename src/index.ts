@@ -2,6 +2,7 @@ import addFile from 'app/actions/addFile';
 import generateFile from 'app/actions/generateFile';
 import wiki from 'app/modules/wiki';
 import 'app/modules/parser';
+import 'app/modules/deduplicator';
 import { db } from './lib';
 import { readdir, writeFile } from 'fs/promises';
 

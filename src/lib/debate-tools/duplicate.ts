@@ -1,14 +1,6 @@
-import { toPairs } from 'lodash';
 import { redis } from 'app/lib/db';
 import { createHash } from 'crypto';
 import { EDGE_TOLERANCE, INSIDE_TOLERANCE, SENTENCE_REGEX } from 'app/constants';
-
-type CardMatches = Record<number, { start: number; end: number }>;
-export interface DedupTask {
-  text: string;
-  id: number;
-  callback: (value: unknown) => void;
-}
 
 export const getSentences = (text: string, cutoff = 20): string[] | undefined => {
   return text
@@ -28,29 +20,44 @@ const getSentenceKey = (sentence: string): [string, string] => {
   // Will create around 260k buckets, each containing a few hundred items with the full dataset
   return ['s' + hash.slice(0, 3), hash.slice(3, 9)];
 };
-export const Sentence = {
-  get: (sentence: string): Promise<string> => redis.hGet(...getSentenceKey(sentence)),
-  set: (sentence: string, card: number): Promise<number> => redis.hSet(...getSentenceKey(sentence), card),
+
+type Table<Key extends unknown[], Value = number> = {
+  get: (...args: [...Key]) => Promise<Value>;
+  set: (...args: [...Key, Value]) => Promise<unknown>;
 };
 
-export const Info = {
-  get: (cardId: number, field: 'p' | 'l'): Promise<string> => redis.hGet(`i${cardId >> 8}`, field + (cardId % 256)),
-  set: (cardId: number, field: 'p' | 'l', value: string | number): Promise<number> =>
-    redis.hSet(`i${cardId >> 8}`, field + (cardId % 256), value),
+const numOrNull = (val: any) => (val == null ? null : +val);
+export const Sentence: Table<[sentence: string]> = {
+  get: (sentence) => redis.hGet(...getSentenceKey(sentence)).then(numOrNull),
+  set: (sentence, card) => redis.hSet(...getSentenceKey(sentence), card),
 };
 
-export const setRedisParents = (cardIds: string[], parentId: number): Promise<number>[] =>
-  cardIds
-    .map((id) => Info.set(+id, 'p', parentId.toString())) // Update card infos with new parent
-    .concat(redis.sAdd(`c${parentId}`, cardIds)); // Add cards to parent's child list
-export const getChildren = (cardId: string): Promise<string[]> => redis.sMembers(`c${cardId}`) ?? Promise.resolve([]);
+export const Info: Table<[cardId: number, field: 'parent' | 'length']> = {
+  get: (cardId, field) => redis.hGet(`i${cardId >> 8}`, field[0] + (cardId % 256)).then(numOrNull),
+  set: (cardId, field, value) => redis.hSet(`i${cardId >> 8}`, field[0] + (cardId % 256), value),
+};
 
-export const getMatching = async (matches: (string | null)[]): Promise<(string | false)[]> => {
-  // If no matches
-  if (!matches.find((el) => el !== null)) return null;
+export const Children: Table<[parentId: number], string[]> = {
+  get: (parentId) => redis.sMembers(`c${parentId}`),
+  set: (parentId, childrenIds) =>
+    Promise.all(
+      childrenIds
+        .map((id) => Info.set(+id, 'parent', parentId)) // Update card infos with new parent
+        .concat(redis.sAdd(`c${parentId}`, childrenIds)), // Add cards to parent's child list
+    ),
+};
 
+type CardMatch = { start: number; end: number };
+const isMatch = async ({ start, end }: CardMatch, key: number, cardLength: number) =>
+  // If start or end probably real match
+  start >= EDGE_TOLERANCE ||
+  end >= cardLength - (EDGE_TOLERANCE + 1) ||
+  // Otherwise should be entire card inside this one
+  end - start - (await Info.get(key, 'length')) <= INSIDE_TOLERANCE;
+
+export const getMatching = async (matches: number[]): Promise<number[]> => {
   // Calculates length of match in case there is a gap due to typo or collision
-  const cards: CardMatches = {};
+  const cards: Record<number, CardMatch> = {};
   for (let i = 0; i < matches.length; i++) {
     const id = matches[i];
     if (id === null) continue;
@@ -58,14 +65,12 @@ export const getMatching = async (matches: (string | null)[]): Promise<(string |
     cards[id] ? (cards[id].end = i) : (cards[id] = { start: i, end: matches.length - 1 });
   }
 
+  const matching: number[] = [];
   // Filter out probably false matches
-  return Promise.all(
-    toPairs(cards).map(async ([key, value]) => {
-      const { start, end } = value;
-      // If match starts at start or ends at end it is probably a real match
-      if (start >= EDGE_TOLERANCE || end >= matches.length - (EDGE_TOLERANCE + 1)) return key;
-      // If dosent reach start or end, it should be the entire card inside this one
-      return end - start - +(await Info.get(+key, 'l')) <= INSIDE_TOLERANCE && key;
+  await Promise.all(
+    Object.entries(cards).map(async ([key, value]) => {
+      if (await isMatch(value, +key, matches.length)) matching.push(+key);
     }),
   );
+  return matching;
 };
