@@ -1,6 +1,5 @@
 import { SectionStyleName, TokenStyleName, styleMap, getDocxStyles } from './';
 import { Document, Packer, Paragraph, TextRun, IRunOptions, IParagraphOptions } from 'docx';
-import { cloneDeep, isEqual } from 'lodash';
 import { promises as fs } from 'fs';
 
 export type TokenStyle = Record<TokenStyleName, boolean>;
@@ -66,15 +65,17 @@ export const tokensToDocument = async (textBlocks: TextBlock[]): Promise<Buffer>
   return fileBuffer;
 };
 
+const isSameFormat = (a: TokenStyle, b: TokenStyle) =>
+  a.mark === b.mark && a.strong === b.strong && a.underline === b.underline;
 export const simplifyTokens = (block: TextBlock): TextBlock => {
-  const simplifiedTokens = block.tokens.reduce((acc, node) => {
-    const prevNode = acc.length > 0 ? acc[acc.length - 1] : undefined;
-    const isSameFormat = prevNode && isEqual(node.format, prevNode.format);
+  const simplifiedTokens = block.tokens.reduce((acc, { format, text }) => {
+    if (!acc.length) return [{ format, text }];
 
-    if (!isSameFormat) {
-      return [...acc, cloneDeep(node)];
-    }
-    prevNode.text += node.text;
+    const prev = acc[acc.length - 1];
+    const { format: prevFormat, text: prevText } = prev;
+
+    // If same format just combine text
+    isSameFormat(format, prevFormat) ? (prev.text = prevText + text) : acc.push({ text, format });
     return acc;
   }, []);
 
