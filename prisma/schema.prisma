@@ -15,6 +15,7 @@ model Evidence {
 
   tag      String
   cite     String?
+  fullcite String?
   summary  String?
   spoken   String?
   fulltext String?
