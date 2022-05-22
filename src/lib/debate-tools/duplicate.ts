@@ -1,6 +1,7 @@
 import { redis } from 'app/lib/db';
 import { createHash } from 'crypto';
 import { EDGE_TOLERANCE, INSIDE_TOLERANCE, SENTENCE_REGEX } from 'app/constants';
+import { commandOptions } from 'redis';
 
 export const getSentences = (text: string, cutoff = 20): string[] | undefined => {
   return text
@@ -9,27 +10,46 @@ export const getSentences = (text: string, cutoff = 20): string[] | undefined =>
     .filter((el: string) => el.length >= cutoff);
 };
 
-/* 
-  Small hashes are stored in a memory efficient way in redis
-  Storing data in buckets using hashes drastically reduces the overhead of storing each value
-  https://redis.io/topics/memory-optimization
-*/
-const getSentenceKey = (sentence: string): [string, string] => {
-  const hash = createHash('md5').update(sentence).digest('base64');
-  // Uses top 18 bits as bucket, and next 36 as key
-  // Will create around 260k buckets, each containing a few hundred items with the full dataset
-  return ['s' + hash.slice(0, 3), hash.slice(3, 9)];
-};
-
+type SentenceMatch = { cardId: number; index: number };
 type Table<Key extends unknown[], Value = number> = {
   get: (...args: [...Key]) => Promise<Value>;
   set: (...args: [...Key, Value]) => Promise<unknown>;
 };
 
 const numOrNull = (val: any) => (val == null ? null : +val);
-export const Sentence: Table<[sentence: string]> = {
-  get: (sentence) => redis.hGet(...getSentenceKey(sentence)).then(numOrNull),
-  set: (sentence, card) => redis.hSet(...getSentenceKey(sentence), card),
+const paddedHex = (num: number, len: number) => num.toString(16).padStart(len, '0');
+/*
+  Data about sentences is stored inside binary strings
+  Sentences are split into buckets so the performances is reasonable
+  Each bucket contains a sequence of 11 byte blocks containing information
+  First 5 bytes are the key of the sentence within the bucket, Next 4 bytes are card id, Last 2 bytes are index of sentence in card
+*/
+const getSentenceKey = (sentence: string): [string, string] => {
+  const hash = createHash('md5').update(sentence).digest('hex');
+  // Uses top 16 bits as bucket, and next 40 as key
+  // Will create 65k buckets, each containing a thousand or so sentences with the full dataset.
+  return ['s' + hash.slice(0, 4), hash.slice(4, 14)];
+};
+export const Sentence: Table<[sentence: string], SentenceMatch[]> = {
+  async get(sentence) {
+    const [bucket, key] = getSentenceKey(sentence);
+    const data = await redis.get(commandOptions({ returnBuffers: true }), bucket);
+    if (!data) return [];
+    if (data.length % 11 != 0) throw new Error(`Data for bucket ${bucket} has invalid length of ${data.length}`);
+
+    // Loop through all sentences in bucket and ignore the ones with a different key
+    const matches: SentenceMatch[] = [];
+    for (let i = 0; i < data.length; i += 11) {
+      if (data.readUIntBE(i, 5) != parseInt(key, 16)) continue;
+      matches.push({ cardId: data.readUIntBE(i + 5, 4), index: data.readUIntBE(i + 9, 2) });
+    }
+    return matches;
+  },
+  async set(sentence, matchInfo) {
+    const [bucket, key] = getSentenceKey(sentence);
+    const data = matchInfo.map(({ cardId, index }) => key + paddedHex(cardId, 8) + paddedHex(index, 4));
+    return redis.append(bucket, Buffer.from(data.join(''), 'hex'));
+  },
 };
 
 export const Info: Table<[cardId: number, field: 'parent' | 'length']> = {
@@ -55,11 +75,11 @@ const isMatch = async ({ start, end }: CardMatch, key: number, cardLength: numbe
   // Otherwise should be entire card inside this one
   end - start - (await Info.get(key, 'length')) <= INSIDE_TOLERANCE;
 
-export const getMatching = async (matches: number[]): Promise<number[]> => {
+export const getMatching = async (matches: SentenceMatch[]): Promise<number[]> => {
   // Calculates length of match in case there is a gap due to typo or collision
   const cards: Record<number, CardMatch> = {};
   for (let i = 0; i < matches.length; i++) {
-    const id = matches[i];
+    const id = matches[i].cardId;
     if (id === null) continue;
     // If new match, set current index as start and end at end of card, otherwise update end index
     cards[id] ? (cards[id].end = i) : (cards[id] = { start: i, end: matches.length - 1 });

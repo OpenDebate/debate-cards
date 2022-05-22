@@ -1,4 +1,4 @@
-import { db, pipe, Lock } from 'app/lib';
+import { db, Lock } from 'app/lib';
 import { getSentences, Sentence, Info, Children, getMatching } from 'app/lib';
 import { CONCURRENT_DEDUPLICATION } from 'app/constants';
 import { onAddEvidence } from 'app/actions/addEvidence';
@@ -45,11 +45,9 @@ async function setParent(id: number, text: string) {
     if (sentences.length) Info.set(id, 'length', sentences.length);
 
     // Get matching cards
-    matching = await pipe(
-      (sentences: string[]) => Promise.all(sentences.map(Sentence.get)),
-      (existing) => Promise.all(existing.map((card) => Info.get(card, 'parent'))),
-      getMatching,
-    )(sentences);
+    const existing = await Promise.all(sentences.map(Sentence.get));
+    const filteredMatches = await getMatching(existing.flat());
+    matching = await Promise.all(filteredMatches.map((card) => Info.get(card, 'parent')));
   } catch (e) {
     unlockSentences();
     throw e;
@@ -68,7 +66,7 @@ async function setParent(id: number, text: string) {
       updates.push(...children.flat());
     }
 
-    sentences.forEach((sentence) => Sentence.set(sentence, parent));
+    sentences.forEach((sentence, i) => Sentence.set(sentence, [{ cardId: id, index: i }]));
     await updateParents(uniq(updates), parent);
   } catch (e) {
     console.error(e);
