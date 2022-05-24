@@ -1,8 +1,10 @@
 import { SentenceMatch, Sentence, Info, Children, Lock } from 'app/lib';
 import { EDGE_TOLERANCE, INSIDE_TOLERANCE, SENTENCE_REGEX } from 'app/constants';
-import { min, uniq } from 'lodash';
-const sentenceLock: Record<string, Lock> = {};
+import { groupBy, map, min, max, uniq } from 'lodash';
+
 const mergeLock: Record<number, Lock> = {};
+type MatchInfo = { cardLen: number; indexes: number[] };
+type MatchPair = { cardId: number; a: MatchInfo; b: MatchInfo };
 
 export const getSentences = (text: string, cutoff = 20): string[] | undefined => {
   return text
@@ -11,66 +13,43 @@ export const getSentences = (text: string, cutoff = 20): string[] | undefined =>
     .filter((el: string) => el.length >= cutoff);
 };
 
-type CardMatch = { start: number; end: number };
-const isMatch = async ({ start, end }: CardMatch, key: number, cardLength: number) =>
-  // If start or end probably real match
-  start >= EDGE_TOLERANCE ||
-  end >= cardLength - (EDGE_TOLERANCE + 1) ||
-  // Otherwise should be entire card inside this one
-  end - start - (await Info.get(key, 'length')) <= INSIDE_TOLERANCE;
+const checkMatch = (a: MatchInfo, b: MatchInfo) =>
+  a.cardLen - (min(a.indexes) - max(a.indexes)) <= INSIDE_TOLERANCE || // If the enterity of A matches
+  (min(a.indexes) <= EDGE_TOLERANCE && b.cardLen - max(b.indexes) <= EDGE_TOLERANCE); // If matches the start of A and the end of B
+// Check in both orders
+const isMatch = (info: MatchPair) => checkMatch(info.a, info.b) || checkMatch(info.b, info.a);
 
-export const getMatching = async (matches: SentenceMatch[]): Promise<number[]> => {
-  // Calculates length of match in case there is a gap due to typo or collision
-  const cards: Record<number, CardMatch> = {};
-  for (let i = 0; i < matches.length; i++) {
-    const id = matches[i].cardId;
-    if (id === null) continue;
-    // If new match, set current index as start and end at end of card, otherwise update end index
-    cards[id] ? (cards[id].end = i) : (cards[id] = { start: i, end: matches.length - 1 });
-  }
+export const getMatching = async (matches: SentenceMatch[][], baseId: number): Promise<number[]> => {
+  // Keep index in both cards
+  const matchIndexes = matches
+    .flatMap((sentence, i) => sentence.map(({ cardId, index }) => ({ cardId, aIndex: i, bIndex: index })))
+    .filter((match) => match.cardId !== baseId);
 
-  const matching: number[] = [];
-  // Filter out probably false matches
-  await Promise.all(
-    Object.entries(cards).map(async ([key, value]) => {
-      if (await isMatch(value, +key, matches.length)) matching.push(+key);
-    }),
+  const matchInfo: MatchPair[] = await Promise.all(
+    map(groupBy(matchIndexes, 'cardId'), async (val, key) => ({
+      cardId: +key,
+      a: { indexes: map(val, 'aIndex'), cardLen: matches.length },
+      b: { indexes: map(val, 'bIndex'), cardLen: await Info.get(+key, 'length') },
+    })),
   );
-  return matching;
+
+  return map(matchInfo.filter(isMatch), 'cardId');
 };
 
 export const findParent = async (id: number, text: string): Promise<{ updates: string[]; parent: number }> => {
   const updates = [id.toString()];
   const sentences = getSentences(text) ?? [];
 
-  const unlockSentences = () => {
-    // Unlock for any cards waiting on sentence, then remove lock for future cards
-    for (const sentence of sentences) {
-      sentenceLock[sentence]?.unlock();
-      delete sentenceLock[sentence];
-    }
-  };
+  if (sentences.length) Info.set(id, 'length', sentences.length);
+  sentences.forEach((sentence, i) => Sentence.set(sentence, [{ cardId: id, index: i }]));
 
-  let matching: number[];
-  try {
-    // If any sentences in this card are being processed wait for them to finish, then mark sentneces as being procsessed
-    for (const sentence of sentences) {
-      await sentenceLock[sentence]?.promise;
-      sentenceLock[sentence] = new Lock();
-    }
-    if (sentences.length) Info.set(id, 'length', sentences.length);
-
-    // Get matching cards
-    const existing = await Promise.all(sentences.map(Sentence.get));
-    const filteredMatches = await getMatching(existing.flat());
-    matching = await Promise.all(filteredMatches.map((card) => Info.get(card, 'parent')));
-  } catch (e) {
-    unlockSentences();
-    throw e;
-  }
+  // Get matching cards
+  const existing = await Promise.all(sentences.map(Sentence.get));
+  const filteredMatches = await getMatching(existing, id);
+  const matching = await Promise.all(filteredMatches.map((card) => Info.get(card, 'parent')));
 
   const parent = min(matching) ?? id;
-  const toMerge = matching.filter((card) => card !== parent);
+  const toMerge = matching.filter((card) => card && card !== parent);
   const mLock = (mergeLock[parent] = new Lock());
 
   try {
@@ -81,13 +60,10 @@ export const findParent = async (id: number, text: string): Promise<{ updates: s
       const children = await Promise.all(toMerge.map(Children.get));
       updates.push(...children.flat());
     }
-
-    sentences.forEach((sentence, i) => Sentence.set(sentence, [{ cardId: id, index: i }]));
   } catch (e) {
     console.error(e);
   }
 
-  unlockSentences();
   // If lock on parent hasnt been overwritten, unlock it
   if (mergeLock[parent] === mLock) {
     mergeLock[parent]?.unlock();
