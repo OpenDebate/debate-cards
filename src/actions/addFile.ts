@@ -13,7 +13,7 @@ export default async (data: FileData): Promise<any> => {
   const buffer = await readFile(data.path);
 
   const { fileId: gid } = await makeId(buffer);
-  console.log(data);
+  console.log(data.name, Date.now());
   const doc = await db.file.upsert({
     where: {
       gid,
@@ -27,6 +27,7 @@ export default async (data: FileData): Promise<any> => {
       ...data,
       // status: 'PENDING',
     },
+    select: { gid: true },
   });
 
   onAddFile.emit({ gid: doc.gid });

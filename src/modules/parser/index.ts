@@ -8,7 +8,7 @@ import { Queue } from 'typescript-collections';
 const fileQueue = new Queue<string>();
 
 (async () => {
-  const pending = await db.file.findMany({ where: { status: { equals: 'PENDING' } } });
+  const pending = await db.file.findMany({ where: { status: { equals: 'PENDING' } }, select: { gid: true } });
   pending.forEach((file) => fileQueue.add(file.gid));
   for (let i = 0; i < CONCURRENT_PARSERS; i++) drain();
 })();
@@ -16,7 +16,7 @@ const fileQueue = new Queue<string>();
 const parseFile = async (gid: string) => {
   try {
     const cards = await pipe(
-      (gid: string) => db.file.findUnique({ where: { gid } }),
+      (gid: string) => db.file.findUnique({ where: { gid }, select: { path: true } }),
       (file) => file.path,
       documentToTokens,
       extractCards,
