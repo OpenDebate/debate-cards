@@ -1,18 +1,17 @@
-import { TextBlock, TokenStyle, TextToken, simplifyTokens, tokensToDocument } from './tokens';
+import { TextBlock, TokenStyle, TextToken, simplifyTokens } from './tokens';
 import { getStyleNameByXml, getOutlineLvlName } from './styles';
-import { Parser as XmlParser } from 'htmlparser2';
-
-export const markupToDocument = async (xml: string, styles: string): Promise<Buffer> => {
-  const tokens = await markupToTokens(xml, styles, { simplified: true });
-  const buffer = await tokensToDocument(tokens);
-  return buffer;
-};
+import { WritableStream as XmlStream } from 'htmlparser2/lib/WritableStream';
+import { Readable } from 'stream';
 
 interface TokensOption {
   simplified: boolean;
 }
 
-export async function markupToTokens(document: string, styles: string, options?: TokensOption): Promise<TextBlock[]> {
+export async function markupToTokens(
+  document: Readable,
+  styles: Readable,
+  options?: TokensOption,
+): Promise<TextBlock[]> {
   const blocks = await tokenize(document, styles);
   if (options?.simplified) {
     const simplifiedBlocks = blocks.map(simplifyTokens);
@@ -27,11 +26,11 @@ const handleStyleTag = (name: string, attribs: Record<string, string>, styles: T
   else if (name === 'w:b') styles.strong = attribs['w:val'] !== '0';
 };
 
-const parseStyles = (styles: string): Promise<Record<string, TokenStyle>> =>
+const parseStyles = (styles: Readable): Promise<Record<string, TokenStyle>> =>
   new Promise((resolve, reject) => {
     const parsedStyles: Record<string, TokenStyle> = {};
     let styleName = '';
-    new XmlParser(
+    const parser = new XmlStream(
       {
         onopentag(name, attribs) {
           if (name === 'w:style') {
@@ -43,16 +42,17 @@ const parseStyles = (styles: string): Promise<Record<string, TokenStyle>> =>
         onerror: reject,
       },
       { xmlMode: true },
-    ).parseComplete(styles);
+    );
+    styles.pipe(parser);
   });
 
-const tokenize = (xml: string, styles: string): Promise<TextBlock[]> =>
+const tokenize = (xml: Readable, styles: Readable): Promise<TextBlock[]> =>
   new Promise((resolve, reject) => {
     parseStyles(styles).then((styleData) => {
       const blocks: TextBlock[] = [];
       let block: TextBlock;
       let token: TextToken;
-      new XmlParser(
+      const parser = new XmlStream(
         {
           onopentag(name, attribs) {
             if (name === 'w:p') block = { format: 'text', tokens: [] };
@@ -75,6 +75,7 @@ const tokenize = (xml: string, styles: string): Promise<TextBlock[]> =>
           onerror: reject,
         },
         { xmlMode: true },
-      ).parseComplete(xml);
+      );
+      xml.pipe(parser);
     });
   });
