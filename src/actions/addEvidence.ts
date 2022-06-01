@@ -22,6 +22,7 @@ export default async (data: EvidenceData): Promise<void> => {
     update: {
       ...omit(data, 'file', 'index'),
     },
+    select: { gid: true },
   });
 
   onAddEvidence.emit({ gid: evidence.gid });

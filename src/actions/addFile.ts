@@ -26,6 +26,7 @@ export default async (data: FileData): Promise<string> => {
       ...data,
       // status: 'PENDING',
     },
+    select: { gid: true },
   });
 
   onAddFile.emit({ gid: doc.gid });
