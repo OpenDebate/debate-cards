@@ -17,6 +17,6 @@ export default async ({ gid }: { gid: string }): Promise<void> => {
     await db.file.update({ where: { gid }, data: { status: 'PROCESSED' } });
   } catch (e) {
     await db.file.update({ where: { gid }, data: { status: 'ERROR' } });
-    throw e;
+    throw new Error(`Error parsing ${gid}: ${e.message}`);
   }
 };

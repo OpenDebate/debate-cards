@@ -20,7 +20,7 @@ export default {
     const files = (await Promise.all(years.map(loadOpenEv))).flat();
     return files.map(({ url, name, wiki }) => ({
       url,
-      filePath: path.join(process.env.DOCUEMNT_PATH, wiki.year, name),
+      filePath: path.join(process.env.DOCUMENT_PATH, wiki.year, name),
       evidenceSet: wiki.name,
     }));
   }),

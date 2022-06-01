@@ -27,6 +27,6 @@ export default async ({ url, filePath, evidenceSet, roundGid }: DownloadInfo): P
       });
   } catch (e) {
     if (roundGid) await db.round.update({ where: { gid: roundGid }, data: { status: 'ERROR' } });
-    throw e;
+    throw new Error(`Error downloading ${url}: ${e.message}`);
   }
 };
