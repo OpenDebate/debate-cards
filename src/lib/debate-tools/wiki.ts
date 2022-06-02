@@ -53,7 +53,7 @@ export const loadRound = async (pageUrl: string, roundId: number): Promise<Omit<
     ...pick(properties, 'tournament', 'judge', 'opponent', 'roundReport'),
     entryDate: new Date(properties.entryDate),
     openSourceUrl,
-    status: properties.openSource?.endsWith('docx') ? 'PENDING' : 'PROCESSED',
+    status: properties.openSource?.includes('docx') ? 'PENDING' : 'PROCESSED',
   };
 };
 
