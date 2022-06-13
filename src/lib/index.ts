@@ -1,5 +1,9 @@
+import { Queue } from 'typescript-collections';
+import { TypedEvent } from './events';
+
 export * from './debate-tools';
 export * from './db';
+export * from './redis';
 export * from './events';
 export * from './request';
 
@@ -44,5 +48,29 @@ export class Lock {
   promise: Promise<void>;
   constructor() {
     this.promise = new Promise((resolve) => (this.unlock = resolve));
+  }
+}
+export class ActionQueue<T> {
+  public queue = new Queue<T>();
+  constructor(
+    private action: (data: T) => Promise<unknown>, // Action to preform
+    concurency: number, // Number of actions to preform at once
+    emitter?: TypedEvent<T>, // Optional emitter to capture events from
+    private loader?: () => Promise<T[]>, // Optional function to load data into queue, to be called later.
+  ) {
+    if (emitter) emitter.on((data) => this.queue.enqueue(data));
+    for (let i = 0; i < concurency; i++) this.drain();
+  }
+
+  private async drain(): Promise<unknown> {
+    if (this.queue.size() === 0) return setTimeout(() => this.drain(), 1000);
+    this.action(this.queue.dequeue())
+      .catch(console.error)
+      .finally(() => this.drain());
+  }
+
+  async load(): Promise<void> {
+    if (!this.loader) return;
+    (await this.loader()).forEach((data) => this.queue.enqueue(data));
   }
 }

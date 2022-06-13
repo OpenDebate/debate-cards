@@ -1,6 +1,10 @@
-import { redis } from 'app/lib/db';
-import { createHash } from 'crypto';
+import { SentenceMatch, Sentence, Info, Children, Lock } from 'app/lib';
 import { EDGE_TOLERANCE, INSIDE_TOLERANCE, SENTENCE_REGEX } from 'app/constants';
+import { groupBy, map, min, max, uniq } from 'lodash';
+
+const mergeLock: Record<number, Lock> = {};
+type MatchInfo = { cardLen: number; indexes: number[] };
+type MatchPair = { cardId: number; a: MatchInfo; b: MatchInfo };
 
 export const getSentences = (text: string, cutoff = 20): string[] | undefined => {
   return text
@@ -9,68 +13,61 @@ export const getSentences = (text: string, cutoff = 20): string[] | undefined =>
     .filter((el: string) => el.length >= cutoff);
 };
 
-/* 
-  Small hashes are stored in a memory efficient way in redis
-  Storing data in buckets using hashes drastically reduces the overhead of storing each value
-  https://redis.io/topics/memory-optimization
-*/
-const getSentenceKey = (sentence: string): [string, string] => {
-  const hash = createHash('md5').update(sentence).digest('base64');
-  // Uses top 18 bits as bucket, and next 36 as key
-  // Will create around 260k buckets, each containing a few hundred items with the full dataset
-  return ['s' + hash.slice(0, 3), hash.slice(3, 9)];
+const checkMatch = (a: MatchInfo, b: MatchInfo) =>
+  a.cardLen - (min(a.indexes) - max(a.indexes)) <= INSIDE_TOLERANCE || // If the enterity of A matches
+  (min(a.indexes) <= EDGE_TOLERANCE && b.cardLen - max(b.indexes) <= EDGE_TOLERANCE); // If matches the start of A and the end of B
+// Check in both orders
+const isMatch = (info: MatchPair) => checkMatch(info.a, info.b) || checkMatch(info.b, info.a);
+
+export const getMatching = async (matches: SentenceMatch[][], baseId: number): Promise<number[]> => {
+  // Keep index in both cards
+  const matchIndexes = matches
+    .flatMap((sentence, i) => sentence.map(({ cardId, index }) => ({ cardId, aIndex: i, bIndex: index })))
+    .filter((match) => match.cardId !== baseId);
+
+  const matchInfo: MatchPair[] = await Promise.all(
+    map(groupBy(matchIndexes, 'cardId'), async (val, key) => ({
+      cardId: +key,
+      a: { indexes: map(val, 'aIndex'), cardLen: matches.length },
+      b: { indexes: map(val, 'bIndex'), cardLen: await Info.get(+key, 'length') },
+    })),
+  );
+
+  return map(matchInfo.filter(isMatch), 'cardId');
 };
 
-type Table<Key extends unknown[], Value = number> = {
-  get: (...args: [...Key]) => Promise<Value>;
-  set: (...args: [...Key, Value]) => Promise<unknown>;
-};
+export const findParent = async (id: number, text: string): Promise<{ updates: string[]; parent: number }> => {
+  const updates = [id.toString()];
+  const sentences = getSentences(text) ?? [];
 
-const numOrNull = (val: any) => (val == null ? null : +val);
-export const Sentence: Table<[sentence: string]> = {
-  get: (sentence) => redis.hGet(...getSentenceKey(sentence)).then(numOrNull),
-  set: (sentence, card) => redis.hSet(...getSentenceKey(sentence), card),
-};
+  if (sentences.length) Info.set(id, 'length', sentences.length);
+  sentences.forEach((sentence, i) => Sentence.set(sentence, [{ cardId: id, index: i }]));
 
-export const Info: Table<[cardId: number, field: 'parent' | 'length']> = {
-  get: (cardId, field) => redis.hGet(`i${cardId >> 8}`, field[0] + (cardId % 256)).then(numOrNull),
-  set: (cardId, field, value) => redis.hSet(`i${cardId >> 8}`, field[0] + (cardId % 256), value),
-};
+  // Get matching cards
+  const existing = await Promise.all(sentences.map(Sentence.get));
+  const filteredMatches = await getMatching(existing, id);
+  const matching = await Promise.all(filteredMatches.map((card) => Info.get(card, 'parent')));
 
-export const Children: Table<[parentId: number], string[]> = {
-  get: (parentId) => redis.sMembers(`c${parentId}`),
-  set: (parentId, childrenIds) =>
-    Promise.all(
-      childrenIds
-        .map((id) => Info.set(+id, 'parent', parentId)) // Update card infos with new parent
-        .concat(redis.sAdd(`c${parentId}`, childrenIds)), // Add cards to parent's child list
-    ),
-};
+  const parent = min(matching) ?? id;
+  const toMerge = matching.filter((card) => card && card !== parent);
+  const mLock = (mergeLock[parent] = new Lock());
 
-type CardMatch = { start: number; end: number };
-const isMatch = async ({ start, end }: CardMatch, key: number, cardLength: number) =>
-  // If start or end probably real match
-  start >= EDGE_TOLERANCE ||
-  end >= cardLength - (EDGE_TOLERANCE + 1) ||
-  // Otherwise should be entire card inside this one
-  end - start - (await Info.get(key, 'length')) <= INSIDE_TOLERANCE;
-
-export const getMatching = async (matches: number[]): Promise<number[]> => {
-  // Calculates length of match in case there is a gap due to typo or collision
-  const cards: Record<number, CardMatch> = {};
-  for (let i = 0; i < matches.length; i++) {
-    const id = matches[i];
-    if (id === null) continue;
-    // If new match, set current index as start and end at end of card, otherwise update end index
-    cards[id] ? (cards[id].end = i) : (cards[id] = { start: i, end: matches.length - 1 });
+  try {
+    // In rare case multiple different parents were matched, merge cards and update parents
+    if (toMerge.length) {
+      // If cards are being added to a given bucket, wait to merge that bucket
+      for (const card of toMerge) await mergeLock[card]?.promise;
+      const children = await Promise.all(toMerge.map(Children.get));
+      updates.push(...children.flat());
+    }
+  } catch (e) {
+    console.error(e);
   }
 
-  const matching: number[] = [];
-  // Filter out probably false matches
-  await Promise.all(
-    Object.entries(cards).map(async ([key, value]) => {
-      if (await isMatch(value, +key, matches.length)) matching.push(+key);
-    }),
-  );
-  return matching;
+  // If lock on parent hasnt been overwritten, unlock it
+  if (mergeLock[parent] === mLock) {
+    mergeLock[parent]?.unlock();
+    delete mergeLock[parent];
+  }
+  return { updates: uniq(updates), parent };
 };
