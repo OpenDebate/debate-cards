@@ -2,17 +2,15 @@ import { TextBlock, StyleName, getStyles, tokensToMarkup } from '.';
 
 const extractText = (blocks: TextBlock[], styles?: StyleName[]): string => {
   if (!blocks[0]) return;
-  return blocks
-    .reduce((acc, block) => {
-      // join text and add spacing if skipping tokens
-      const text = block?.tokens.reduce((str, token) => {
-        if (!styles || styles.every((style) => token.format[style])) return str + token.text;
-        else return str.trim() + ' ';
-      }, '');
+  return blocks.reduce((acc, block) => {
+    // join text and add spacing if skipping tokens
+    const text = block?.tokens.reduce((str, token) => {
+      if (!styles || styles.every((style) => token.format[style])) return str + token.text;
+      else return str.trim() + ' ';
+    }, '');
 
-      return acc.trim() + '\n' + text.trim();
-    }, '')
-    .trim();
+    return acc.trim() + '\n' + text.trim();
+  }, '');
 };
 
 export const getIndexesWith = (blocks: TextBlock[], styles: StyleName[]): number[] => {
@@ -24,10 +22,7 @@ export const getIndexesWith = (blocks: TextBlock[], styles: StyleName[]): number
 };
 
 const getLastBlockWith = (blocks: TextBlock[], anchor: number, styles: StyleName[]): TextBlock => {
-  let ret;
-  const range = [...Array(anchor).keys()];
-  range.forEach((idx) => (ret = styles.includes(blocks[idx].format) ? blocks[idx] : ret));
-  return ret;
+  for (let i = anchor; i >= 0; i--) if (styles.includes(blocks[i].format)) return blocks[i];
 };
 
 export const getBlocksUntil = (blocks: TextBlock[], anchor: number, styles: StyleName[]): TextBlock[] => {

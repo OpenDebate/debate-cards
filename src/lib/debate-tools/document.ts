@@ -8,9 +8,9 @@ import fs from 'fs';
   2 - tokenize document.xml and pull info on named styles from styles.xml
 */
 export const documentToTokens = async (filepath: string): Promise<TextBlock[]> => {
-  const document = await loadXml(filepath, /document\.xml$/);
-  const styles = await loadXml(filepath, /styles\.xml$/);
-  const tokens = markupToTokens(document, styles, { simplified: true });
+  const document = loadXml(filepath, /document\.xml$/);
+  const styles = loadXml(filepath, /styles\.xml$/);
+  const tokens = await markupToTokens(document, styles, { simplified: true });
   return tokens;
 };
 
@@ -26,13 +26,5 @@ export const documentToMarkup = async (filepath: string): Promise<string> => {
 };
 
 // Load xml by unzipping docx file, file is regex for file name to look for
-const loadXml = (path: string, file: RegExp): Promise<string> => {
-  return new Promise((resolve) => {
-    let data = '';
-    const stream = fs.createReadStream(path);
-    stream
-      .pipe(ParseOne(file))
-      .on('data', (chunk) => (data += chunk))
-      .on('end', () => resolve(data));
-  });
-};
+const loadXml = (path: string, file: RegExp) =>
+  fs.createReadStream(path).pipe(ParseOne(file)).on('error', console.error);

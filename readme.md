@@ -2,6 +2,12 @@
 
 System to search and download debate evidence - "cards" - that are parsed from word documents. Live at [debate.cards](http://debate.cards)
 
+## Project Info
+This project is currently being rewritten as part of an ongoing refactor and migration to TypeScript. [See the development here.](https://github.com/arvind-balaji/debate-cards/tree/v3)
+
+The version of this project that is currently deployed at [debate.cards](http://debate.cards) is tagged as [v1.0.0](https://github.com/arvind-balaji/debate-cards/tree/v1.0.0)
+
+
 ## Description
 
 Word documents are converted to html using pandoc, the resulting markup is then parsed so that cards can be split up based on heading level.

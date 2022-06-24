@@ -7,6 +7,21 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model EvidenceBucket {
+  id    Int @id @default(autoincrement())
+  count Int @default(0)
+
+  rootId Int      @unique
+  root   Evidence @relation("root", fields: [rootId], references: [id])
+
+  evidence Evidence[] @relation("evidence")
+
+  // evidence   Evidence[]
+  // evidenceId Int?
+  // Evidence   Evidence? @relation(fields: [evidenceId], references: [id])
+  // evidenceId Int?
+}
+
 model Evidence {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
@@ -26,6 +41,11 @@ model Evidence {
 
   file   File? @relation(fields: [fileId], references: [id])
   fileId Int?
+
+  bucket   EvidenceBucket? @relation("evidence", fields: [bucketId], references: [id])
+  bucketId Int?
+
+  root EvidenceBucket? @relation("root")
 }
 
 model File {

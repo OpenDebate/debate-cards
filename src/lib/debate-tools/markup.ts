@@ -1,90 +1,81 @@
-import ch from 'cheerio';
-import {
-  TextBlock,
-  getStyleNameByXml,
-  TokenStyle,
-  SectionStyleName,
-  simplifyTokens,
-  tokensToDocument,
-  getOutlineLvlName,
-  getStyleNameByOutlineLvl,
-} from './';
-
-export const markupToDocument = async (xml: string, styles: string): Promise<Buffer> => {
-  const tokens = markupToTokens(xml, styles, { simplified: true });
-  const buffer = await tokensToDocument(tokens);
-  return buffer;
-};
+import { TextBlock, TokenStyle, TextToken, simplifyTokens } from './tokens';
+import { getStyleNameByXml, getOutlineLvlName } from './styles';
+import { WritableStream as XmlStream } from 'htmlparser2/lib/WritableStream';
+import { Readable } from 'stream';
 
 interface TokensOption {
   simplified: boolean;
 }
 
-export const markupToTokens = (document: string, styles: string, options?: TokensOption): TextBlock[] => {
-  const blocks = tokenize(document, styles);
+export async function markupToTokens(
+  document: Readable,
+  styles: Readable,
+  options?: TokensOption,
+): Promise<TextBlock[]> {
+  const blocks = await tokenize(document, styles);
   if (options?.simplified) {
-    const simplifiedBlocks = blocks.map((block) => simplifyTokens(block));
+    const simplifiedBlocks = blocks.map(simplifyTokens);
     return simplifiedBlocks;
   }
   return blocks;
+}
+
+const handleStyleTag = (name: string, attribs: Record<string, string>, styles: TokenStyle) => {
+  if (name === 'w:u') styles.underline = attribs['w:val'] !== 'none';
+  else if (name === 'w:highlight') styles.mark = true;
+  else if (name === 'w:b') styles.strong = attribs['w:val'] !== '0';
 };
 
-const getChild = (el, names: string[]) =>
-  names.reduce((acc, name) => {
-    return acc?.children?.find((child) => child.name === name);
-  }, el);
+const parseStyles = (styles: Readable): Promise<Record<string, TokenStyle>> =>
+  new Promise((resolve, reject) => {
+    const parsedStyles: Record<string, TokenStyle> = {};
+    let styleName = '';
+    const parser = new XmlStream(
+      {
+        onopentag(name, attribs) {
+          if (name === 'w:style') {
+            styleName = attribs['w:styleId'];
+            parsedStyles[styleName] = { underline: false, strong: false, mark: false };
+          } else if (styleName) handleStyleTag(name, attribs, parsedStyles[styleName]);
+        },
+        onend: () => resolve(parsedStyles),
+        onerror: reject,
+      },
+      { xmlMode: true },
+    );
+    styles.pipe(parser);
+  });
 
-// Extract what formatting applies to block of text
-const updateElFormating = (styleEl, current?: TokenStyle): TokenStyle => {
-  const formatting: TokenStyle = current ? { ...current } : { underline: false, strong: false, mark: false };
-  const styles = getChild(styleEl, ['w:rPr']);
-  if (!styles) return formatting;
-
-  const highlight = getChild(styles, ['w:highlight']);
-  const bold = getChild(styles, ['w:b']);
-  const underline = getChild(styles, ['w:u'])?.attribs['w:val'];
-
-  if (highlight) formatting.mark = true;
-  if (bold) formatting.strong = bold.attribs['w:val'] !== '0';
-  if (underline) formatting.underline = underline !== 'none';
-
-  return formatting;
-};
-
-const getBlockFormat = (block): SectionStyleName => {
-  const stlyeNameFormat = getStyleNameByXml(getChild(block, ['w:pPr', 'w:pStyle'])?.attribs['w:val']);
-  if (stlyeNameFormat !== 'text') return stlyeNameFormat;
-
-  // Sometimes uses outline level instead of header
-  const outlineLvl = getChild(block, ['w:pPr', 'w:outlineLvl'])?.attribs['w:val'];
-  return getOutlineLvlName(parseInt(outlineLvl) + 1);
-};
-
-const tokenize = (xml: string, styles: string): TextBlock[] => {
-  const s = ch.load(styles, { xmlMode: true });
-  const d = ch.load(xml, { xmlMode: true });
-
-  // Generate map of style names to formatting from styles.xml
-  const xmlStyles: Record<string, TokenStyle> = s('w\\:style')
-    .get()
-    .reduce((acc, node) => {
-      acc[node.attribs['w:styleId']] = updateElFormating(node);
-      return acc;
-    }, {});
-
-  const tokens: TextBlock[] = d('w\\:p')
-    .get()
-    .map((block) => ({
-      format: getBlockFormat(block),
-      tokens: ch(block)
-        .children('w\\:r')
-        .get()
-        .map((node) => ({
-          text: ch(node).text(),
-          // combine formatting defined in text block and formatting from style name
-          format: updateElFormating(node, xmlStyles[getChild(node, ['w:rPr', 'w:rStyle'])?.attribs['w:val']]),
-        })),
-    }));
-
-  return tokens;
-};
+const tokenize = (xml: Readable, styles: Readable): Promise<TextBlock[]> =>
+  new Promise((resolve, reject) => {
+    parseStyles(styles).then((styleData) => {
+      const blocks: TextBlock[] = [];
+      let block: TextBlock;
+      let token: TextToken;
+      const parser = new XmlStream(
+        {
+          onopentag(name, attribs) {
+            if (name === 'w:p') block = { format: 'text', tokens: [] };
+            else if (name === 'w:pStyle') block.format = getStyleNameByXml(attribs['w:val']);
+            else if (name === 'w:outlineLvl') block.format = getOutlineLvlName(+attribs['w:val'] + 1);
+            else if (name === 'w:r') token = { text: '', format: { underline: false, strong: false, mark: false } };
+            else if (token) {
+              if (name === 'w:rStyle') token.format = { ...styleData[attribs['w:val']] };
+              else handleStyleTag(name, attribs, token.format);
+            }
+          },
+          ontext(data) {
+            if (token) token.text += data;
+          },
+          onclosetag(name) {
+            if (name === 'w:p' && block.tokens.length) blocks.push(block);
+            else if (name === 'w:r' && token.text) block.tokens.push(token);
+          },
+          onend: () => resolve(blocks),
+          onerror: reject,
+        },
+        { xmlMode: true },
+      );
+      xml.pipe(parser);
+    });
+  });

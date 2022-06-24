@@ -1,4 +1,3 @@
-import { Evidence } from 'app/entities';
 import { db, TypedEvent } from 'app/lib';
 import { TextBlock, tokensToDocument, getOutlineLvlName, TextToken, TokenStyle, getStyles } from 'app/lib/debate-tools';
 import ch from 'cheerio';
@@ -15,7 +14,7 @@ const textNodes = (nodes: any[], format: TokenStyle): TextToken[] => {
   });
 };
 
-const cardToTokens = (card: Evidence): TextBlock[] =>
+const cardToTokens = (card: { markup: string }): TextBlock[] =>
   ch('h4, p', card.markup)
     .get()
     .map((block) => ({
@@ -23,7 +22,7 @@ const cardToTokens = (card: Evidence): TextBlock[] =>
       tokens: textNodes(ch(block).contents().get(), { underline: false, strong: false, mark: false }),
     }));
 
-const flattenLevel = (data: Evidence[], level: number): TextBlock[] => {
+const flattenLevel = (data: { markup: string }[], level: number): TextBlock[] => {
   if (level == 4) return data.flatMap(cardToTokens);
 
   const header = getOutlineLvlName(level);
@@ -37,13 +36,9 @@ const flattenLevel = (data: Evidence[], level: number): TextBlock[] => {
 };
 
 export default async (ids: number[], keepHeadings: boolean): Promise<Buffer> => {
-  let evidence = await db.evidence.findMany({
-    where: {
-      id: { in: ids },
-    },
-  });
+  const evidence = await db.evidence.findMany({ where: { id: { in: ids } }, select: { markup: true } });
 
-  let tokens: TextBlock[] = flattenLevel(evidence, keepHeadings ? 1 : 4);
+  const tokens: TextBlock[] = flattenLevel(evidence, keepHeadings ? 1 : 4);
   onGenerateFile.emit({ ids });
   return await tokensToDocument(tokens);
 };
