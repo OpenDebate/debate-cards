@@ -28,7 +28,8 @@ async function makeFile(id: number) {
 
 (async () => {
   try {
-    wiki.main();
+    wiki.openevQueue.load();
+    wiki.roundQueue.load();
   } catch (error) {
     console.error(error);
   }
