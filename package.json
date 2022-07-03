@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@elastic/elasticsearch": "^8.2.1",
     "@prisma/client": "^3.8.1",
     "cheerio": "1.0.0-rc.3",
     "docx": "^6.0.3",
