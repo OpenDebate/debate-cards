@@ -11,6 +11,8 @@
     "sourceMap": true,
     "outDir": "build",
     "baseUrl": ".",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "paths": {
       "app/*": ["src/*"]
     }

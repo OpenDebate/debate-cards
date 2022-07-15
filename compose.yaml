@@ -1,8 +1,7 @@
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.2.3
-    env_file:
-      - .env
+    env_file: .env
     environment:
       - xpack.security.enabled=false # Dont need for now, complicates things a lot
       - discovery.type=single-node
@@ -15,8 +14,7 @@ services:
   postgres:
     image: postgres:14
     command: postgres -c wal_level=logical -c max_replication_slots=2 # Options for pgsync
-    env_file:
-      - .env
+    env_file: .env
     expose:
       - 5432
     healthcheck:
@@ -60,17 +58,30 @@ services:
       - REDIS_AUTH=${REDIS_PASSWORD}
   tasks:
     build: .
+    command: npm run start:tasks
     depends_on:
       - postgres
       - redis
-    env_file:
-      - .env
+    env_file: .env
     ports:
       - 5555:5555 # Prisma studio port
     profiles:
       - tasks # Dont start by default
     volumes:
       - ${DOCUMENT_PATH-:./documents}:/app/documents
+  api:
+    build: .
+    command: npm run dev:api
+    depends_on:
+      - postgres
+      - elasticsearch
+    env_file: .env
+    ports:
+      - 4000:4000
+    expose:
+      - 4000
+    volumes:
+      - ./src:/app/src
   migrate:
     build: 
       context: .
