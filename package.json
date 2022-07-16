@@ -9,8 +9,8 @@
     "start": "npm run tasks & node ./build/modules/api",
     "start:tasks": "node ./build/tasks",
     "start:api": "node ./build/modules/api",
-    "dev": "ts-node-dev --respawn -r tsconfig-paths/register ./src/",
-    "dev:api": "ts-node-dev --poll --respawn -r tsconfig-paths/register ./src/modules/api"
+    "dev": "ts-node-dev --poll --respawn -r tsconfig-paths/register ./src/",
+    "dev:api": "ts-node-dev --watch ./src/modules/api --poll --respawn -r tsconfig-paths/register ./src/modules/api"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^8.2.1",
