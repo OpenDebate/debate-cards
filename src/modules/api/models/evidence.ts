@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Field, ID, ObjectType } from 'type-graphql';
 import { Evidence as EvidenceSchema } from '@prisma/client';
-// import { File } from './file';
+import { File as FileModel } from './file';
 
 @ObjectType()
 export class Evidence implements Partial<EvidenceSchema> {
@@ -32,8 +32,8 @@ export class Evidence implements Partial<EvidenceSchema> {
   @Field({ nullable: true })
   block: string | null;
 
-  // @Field({ nullable: true })
-  // file: File | null;
+  @Field({ nullable: true })
+  file: FileModel | null;
 
   @Field({ nullable: true })
   bucketId: number | null;
