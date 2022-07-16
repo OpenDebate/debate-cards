@@ -1,14 +1,8 @@
 import 'reflect-metadata';
-import { db } from 'app/lib/db';
-import { selectFields } from 'app/lib/graphql';
-import { Arg, Info, Query, Resolver } from 'type-graphql';
-import { GraphQLResolveInfo } from 'graphql';
+import { Resolver } from 'type-graphql';
+import { createGetResolver } from '.';
 import { File } from '../models';
 
-@Resolver(File)
-export class FileResolver {
-  @Query((returns) => File, { nullable: true })
-  async file(@Arg('id') id: number, @Info() info: GraphQLResolveInfo): Promise<Partial<File>> {
-    return db.file.findUnique({ where: { id }, select: selectFields(info) });
-  }
-}
+const FileGetResolver = createGetResolver('file', File);
+@Resolver()
+export class FileResolver extends FileGetResolver {}
