@@ -15,6 +15,7 @@ export default async ({ url, roundId, gid }: RoundInfo): Promise<{ gid: string }
       url: data.openSourceUrl,
       filePath: path.join(process.env.DOCUMENT_PATH, wiki, school, team, side, `${tournament}-Round${roundNum}.docx`),
       evidenceSet: wiki,
+      roundGid: gid,
     });
   }
 
