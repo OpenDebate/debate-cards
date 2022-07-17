@@ -3,7 +3,7 @@ import { db, pipe } from 'app/lib';
 
 import { documentToTokens, extractCards, makeChildId } from 'app/lib/debate-tools';
 
-export default async ({ gid }: { gid: string }) => {
+export default async ({ gid }: { gid: string }): Promise<void> => {
   try {
     const cards = await pipe(
       (gid: string) => db.file.findUnique({ where: { gid }, select: { path: true } }),
@@ -16,7 +16,7 @@ export default async ({ gid }: { gid: string }) => {
     for (const card of cards) await addEvidence({ ...card, gid: makeChildId(gid, card.index), file: { gid } });
     await db.file.update({ where: { gid }, data: { status: 'PROCESSED' } });
   } catch (e) {
-    console.error(e);
     await db.file.update({ where: { gid }, data: { status: 'ERROR' } });
+    throw new Error(`Error parsing ${gid}: ${e.message}`);
   }
 };

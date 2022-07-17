@@ -9,11 +9,10 @@ export type FileData = Omit<Prisma.FileCreateInput, ExcludedFileFields>;
 
 export const onAddFile = new TypedEvent<{ gid: string }>();
 
-export default async (data: FileData): Promise<any> => {
+export default async (data: FileData): Promise<string> => {
   const buffer = await readFile(data.path);
 
   const { fileId: gid } = await makeId(buffer);
-  console.log(data.name, Date.now());
   const doc = await db.file.upsert({
     where: {
       gid,
@@ -32,5 +31,5 @@ export default async (data: FileData): Promise<any> => {
 
   onAddFile.emit({ gid: doc.gid });
 
-  return;
+  return doc.gid;
 };

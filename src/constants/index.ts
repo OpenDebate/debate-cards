@@ -1,3 +1,5 @@
+export * from './wiki';
+
 // Max number of files being parsed concurrently, allows parsing to take place while waiting for database response
 export const CONCURRENT_PARSERS = 10;
 // Max number of cards being deduplicated concurrently

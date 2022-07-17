@@ -5,6 +5,7 @@ export * from './debate-tools';
 export * from './db';
 export * from './redis';
 export * from './events';
+export * from './request';
 
 // XXX: hacky solution for typesafe async pipe
 type MaybePromise<T> = Promise<T> | T;
@@ -30,6 +31,18 @@ export function pipe(...fns: Function[]) {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   return (x: any) => fns.reduce(async (y, fn) => fn(await y), x);
 }
+
+export function timeElapsed(startTime: number): string {
+  const elapsed = Date.now() - startTime;
+  const seconds = Math.floor(elapsed / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  const minuteString = (minutes % 60).toString().padStart(2, '0');
+  const secondsString = (seconds % 60).toString().padStart(2, '0');
+  return `${hours}:${minuteString}:${secondsString}`;
+}
+
 export class Lock {
   unlock: () => void;
   promise: Promise<void>;
@@ -40,7 +53,7 @@ export class Lock {
 export class ActionQueue<T> {
   public queue = new Queue<T>();
   constructor(
-    public action: (data: T) => Promise<unknown>, // Action to preform
+    private action: (data: T) => Promise<unknown>, // Action to preform
     concurency: number, // Number of actions to preform at once
     emitter?: TypedEvent<T>, // Optional emitter to capture events from
     private loader?: () => Promise<T[]>, // Optional function to load data into queue, to be called later.
@@ -49,7 +62,7 @@ export class ActionQueue<T> {
     for (let i = 0; i < concurency; i++) this.drain();
   }
 
-  async drain(): Promise<unknown> {
+  private async drain(): Promise<unknown> {
     if (this.queue.size() === 0) return setTimeout(() => this.drain(), 1000);
     this.action(this.queue.dequeue())
       .catch(console.error)
