@@ -8,6 +8,9 @@ export class EvidenceBucket implements Partial<EvidenceBucketSchema> {
   @Field((type) => ID)
   id: number;
 
+  @Field()
+  count: number;
+
   @Field((type) => [Evidence])
   evidence: Evidence[];
 }

@@ -26,11 +26,26 @@ export class EvidenceResolver extends EvidenceGetResolver {
     console.time('search');
     const results = await elastic.search({
       index: 'evidence',
+      size: 10,
       query: {
-        query_string: {
-          query,
-          type: 'most_fields', // sums scores from each field
-          fields: ['tag^2', 'fullcite', 'fulltext'],
+        function_score: {
+          query: {
+            query_string: {
+              query,
+              type: 'most_fields', // sums scores from each field
+              fields: ['tag^2', 'fullcite', 'fulltext'],
+            },
+          },
+          functions: [
+            {
+              script_score: {
+                script: {
+                  source: "_score * Math.sqrt(doc['duplicateCount'].value)",
+                },
+              },
+            },
+          ],
+          boost_mode: 'replace',
         },
       },
       collapse: {
@@ -41,7 +56,9 @@ export class EvidenceResolver extends EvidenceGetResolver {
     });
     console.timeEnd('search');
     const ids: number[] = flatMap(results.hits.hits, 'fields.id');
+    console.time('load');
     const evidence = await db.evidence.findMany({ where: { id: { in: ids } }, select: selectFields(info) });
+    console.timeEnd('load');
     // Resort results based on ranking
     return evidence.sort((a: { id: number }, b: { id: number }) => ids.indexOf(a.id) - ids.indexOf(b.id));
   }
