@@ -4,6 +4,7 @@ import 'app/modules/parser';
 import 'app/modules/deduplicator';
 import { db } from './lib';
 import { readdir, writeFile } from 'fs/promises';
+import { DefaultApi as CaselistApi, DefaultApiApiKeys } from './constants/caselist/api';
 
 async function loadDir(dir: string) {
   const files = (await readdir(dir)).map((file) => ({
@@ -27,7 +28,11 @@ async function makeFile(id: number) {
 
 (async () => {
   try {
-    console.log('Started');
+    console.log('Creating client');
+    const caselist = new CaselistApi();
+    caselist.setApiKey(DefaultApiApiKeys.cookie, process.env.CASELIST_TOKEN);
+    const data = await caselist.getCaselists();
+    console.log(data.body);
   } catch (error) {
     console.error(error);
   }
