@@ -13,13 +13,27 @@
 import { RequestFile } from './models';
 
 export class School {
+    'schoolId'?: number;
+    'caselistId'?: number;
     'name'?: string;
     'displayName': string;
     'state'?: string | null;
+    'chapterId'?: number;
+    'archived'?: boolean;
 
     static discriminator: string | undefined = undefined;
 
     static attributeTypeMap: Array<{name: string, baseName: string, type: string}> = [
+        {
+            "name": "schoolId",
+            "baseName": "school_id",
+            "type": "number"
+        },
+        {
+            "name": "caselistId",
+            "baseName": "caselist_id",
+            "type": "number"
+        },
         {
             "name": "name",
             "baseName": "name",
@@ -27,13 +41,23 @@ export class School {
         },
         {
             "name": "displayName",
-            "baseName": "displayName",
+            "baseName": "display_name",
             "type": "string"
         },
         {
             "name": "state",
             "baseName": "state",
             "type": "string"
+        },
+        {
+            "name": "chapterId",
+            "baseName": "chapter_id",
+            "type": "number"
+        },
+        {
+            "name": "archived",
+            "baseName": "archived",
+            "type": "boolean"
         }    ];
 
     static getAttributeTypeMap() {

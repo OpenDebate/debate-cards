@@ -84,15 +84,21 @@
       "School": {
         "type": "object",
         "required": [
-          "displayName"
+          "display_name"
         ],
         "properties": {
+          "school_id": {
+            "type": "integer"
+          },
+          "caselist_id": {
+            "type": "integer"
+          },
           "name": {
             "type": "string",
             "maxLength": 255,
             "format": "^[A-Za-z0-9 -]"
           },
-          "displayName": {
+          "display_name": {
             "type": "string",
             "format": "^[A-Za-z0-9 -]"
           },
@@ -101,6 +107,12 @@
             "minLength": 2,
             "maxLength": 2,
             "nullable": true
+          },
+          "chapter_id": {
+            "type": "integer"
+          },
+          "archived": {
+            "type": "boolean"
           }
         }
       },
