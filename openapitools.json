@@ -6,7 +6,7 @@
     "generators": {
       "caselist": {
         "generatorName": "typescript-node",
-        "inputSpec": "https://api.opencaselist.com/v1/docs",
+        "inputSpec": "./src/constants/caselistSchema.json",
         "output": "#{cwd}/src/constants/caselist",
         "skipValidateSpec": true
       }
