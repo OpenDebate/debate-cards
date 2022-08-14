@@ -14,11 +14,14 @@ import { RequestFile } from './models';
 
 export class Caselist {
     'caselistId'?: number;
-    'slug'?: string;
     'name'?: string;
-    'event'?: string;
+    'displayName'?: string;
     'year'?: number;
+    'event'?: string;
+    'level'?: string;
+    'teamSize'?: number;
     'archived'?: boolean;
+    'archiveUrl'?: string | null;
 
     static discriminator: string | undefined = undefined;
 
@@ -29,18 +32,13 @@ export class Caselist {
             "type": "number"
         },
         {
-            "name": "slug",
-            "baseName": "slug",
-            "type": "string"
-        },
-        {
             "name": "name",
             "baseName": "name",
             "type": "string"
         },
         {
-            "name": "event",
-            "baseName": "event",
+            "name": "displayName",
+            "baseName": "display_name",
             "type": "string"
         },
         {
@@ -49,9 +47,29 @@ export class Caselist {
             "type": "number"
         },
         {
+            "name": "event",
+            "baseName": "event",
+            "type": "string"
+        },
+        {
+            "name": "level",
+            "baseName": "level",
+            "type": "string"
+        },
+        {
+            "name": "teamSize",
+            "baseName": "team_size",
+            "type": "number"
+        },
+        {
             "name": "archived",
             "baseName": "archived",
             "type": "boolean"
+        },
+        {
+            "name": "archiveUrl",
+            "baseName": "archive_url",
+            "type": "string"
         }    ];
 
     static getAttributeTypeMap() {

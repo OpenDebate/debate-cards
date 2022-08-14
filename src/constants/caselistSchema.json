@@ -30,20 +30,30 @@
             "type": "integer",
             "minimum": 1
           },
-          "slug": {
-            "type": "string"
-          },
           "name": {
             "type": "string"
           },
-          "event": {
+          "display_name": {
             "type": "string"
           },
           "year": {
             "type": "integer"
           },
+          "event": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "team_size": {
+            "type": "integer"
+          },
           "archived": {
             "type": "boolean"
+          },
+          "archive_url": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
