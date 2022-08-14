@@ -13,9 +13,9 @@
 import { RequestFile } from './models';
 
 export class School {
-    'schoolId'?: number;
-    'caselistId'?: number;
-    'name'?: string;
+    'schoolId': number;
+    'caselistId': number;
+    'name': string;
     'displayName': string;
     'state'?: string | null;
     'chapterId'?: number;

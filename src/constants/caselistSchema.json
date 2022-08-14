@@ -25,6 +25,16 @@
       },
       "Caselist": {
         "type": "object",
+        "required": [
+          "caselist_id",
+          "name",
+          "display_name",
+          "year",
+          "event",
+          "level",
+          "team_size",
+          "archived"
+        ],
         "properties": {
           "caselist_id": {
             "type": "integer",
@@ -60,6 +70,9 @@
       "Cite": {
         "type": "object",
         "required": [
+          "cite_id",
+          "title",
+          "cites",
           "round_id"
         ],
         "properties": {
@@ -94,6 +107,9 @@
       "School": {
         "type": "object",
         "required": [
+          "school_id",
+          "name",
+          "caselist_id",
           "display_name"
         ],
         "properties": {
@@ -128,6 +144,14 @@
       },
       "Team": {
         "type": "object",
+        "required": [
+          "team_id",
+          "school_id",
+          "name",
+          "display_name",
+          "debater1_first",
+          "debater1_last"
+        ],
         "properties": {
           "team_id": {
             "type": "integer"
@@ -226,6 +250,16 @@
       },
       "Round": {
         "type": "object",
+        "required": [
+          "round_id",
+          "side",
+          "tournament",
+          "round",
+          "opponent",
+          "judge",
+          "report",
+          "team_id"
+        ],
         "properties": {
           "round_id": {
             "type": "integer"

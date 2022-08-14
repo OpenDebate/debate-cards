@@ -13,13 +13,13 @@
 import { RequestFile } from './models';
 
 export class Team {
-    'teamId'?: number;
-    'schoolId'?: number;
-    'name'?: string;
-    'displayName'?: string;
+    'teamId': number;
+    'schoolId': number;
+    'name': string;
+    'displayName': string;
     'notes'?: string;
-    'debater1First'?: string;
-    'debater1Last'?: string;
+    'debater1First': string;
+    'debater1Last': string;
     'debater1StudentId'?: number;
     'debater2First'?: string;
     'debater2Last'?: string;

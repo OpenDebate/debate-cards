@@ -13,14 +13,14 @@
 import { RequestFile } from './models';
 
 export class Round {
-    'roundId'?: number;
-    'teamId'?: number;
-    'side'?: string;
-    'tournament'?: string;
-    'round'?: string;
-    'opponent'?: string | null;
-    'judge'?: string | null;
-    'report'?: string | null;
+    'roundId': number;
+    'teamId': number;
+    'side': string;
+    'tournament': string;
+    'round': string;
+    'opponent': string | null;
+    'judge': string | null;
+    'report': string | null;
     'opensource'?: string | null;
     'video'?: string | null;
     'tournId'?: number | null;

@@ -13,10 +13,10 @@
 import { RequestFile } from './models';
 
 export class Cite {
-    'citeId'?: number;
+    'citeId': number;
     'roundId': number;
-    'title'?: string;
-    'cites'?: string;
+    'title': string;
+    'cites': string;
 
     static discriminator: string | undefined = undefined;
 

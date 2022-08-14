@@ -13,14 +13,14 @@
 import { RequestFile } from './models';
 
 export class Caselist {
-    'caselistId'?: number;
-    'name'?: string;
-    'displayName'?: string;
-    'year'?: number;
-    'event'?: string;
-    'level'?: string;
-    'teamSize'?: number;
-    'archived'?: boolean;
+    'caselistId': number;
+    'name': string;
+    'displayName': string;
+    'year': number;
+    'event': string;
+    'level': string;
+    'teamSize': number;
+    'archived': boolean;
     'archiveUrl'?: string | null;
 
     static discriminator: string | undefined = undefined;
