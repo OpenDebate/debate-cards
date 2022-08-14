@@ -208,10 +208,16 @@
       "Round": {
         "type": "object",
         "properties": {
-          "tournament": {
-            "type": "string"
+          "round_id": {
+            "type": "integer"
+          },
+          "team_id": {
+            "type": "integer"
           },
           "side": {
+            "type": "string"
+          },
+          "tournament": {
             "type": "string"
           },
           "round": {
@@ -228,6 +234,14 @@
             "maxLength": 255
           },
           "report": {
+            "type": "string",
+            "nullable": true
+          },
+          "opensource": {
+            "type": "string",
+            "nullable": true
+          },
+          "video": {
             "type": "string",
             "nullable": true
           },

@@ -13,12 +13,16 @@
 import { RequestFile } from './models';
 
 export class Round {
-    'tournament'?: string;
+    'roundId'?: number;
+    'teamId'?: number;
     'side'?: string;
+    'tournament'?: string;
     'round'?: string;
     'opponent'?: string | null;
     'judge'?: string | null;
     'report'?: string | null;
+    'opensource'?: string | null;
+    'video'?: string | null;
     'tournId'?: number | null;
     'externalId'?: number | null;
 
@@ -26,13 +30,23 @@ export class Round {
 
     static attributeTypeMap: Array<{name: string, baseName: string, type: string}> = [
         {
-            "name": "tournament",
-            "baseName": "tournament",
-            "type": "string"
+            "name": "roundId",
+            "baseName": "round_id",
+            "type": "number"
+        },
+        {
+            "name": "teamId",
+            "baseName": "team_id",
+            "type": "number"
         },
         {
             "name": "side",
             "baseName": "side",
+            "type": "string"
+        },
+        {
+            "name": "tournament",
+            "baseName": "tournament",
             "type": "string"
         },
         {
@@ -53,6 +67,16 @@ export class Round {
         {
             "name": "report",
             "baseName": "report",
+            "type": "string"
+        },
+        {
+            "name": "opensource",
+            "baseName": "opensource",
+            "type": "string"
+        },
+        {
+            "name": "video",
+            "baseName": "video",
             "type": "string"
         },
         {
