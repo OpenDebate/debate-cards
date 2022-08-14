@@ -119,6 +119,12 @@
       "Team": {
         "type": "object",
         "properties": {
+          "team_id": {
+            "type": "integer"
+          },
+          "school_id": {
+            "type": "integer"
+          },
           "name": {
             "type": "string"
           },
@@ -163,6 +169,9 @@
           },
           "debater4_student_id": {
             "type": "integer"
+          },
+          "archived": {
+            "type": "boolean"
           }
         }
       },

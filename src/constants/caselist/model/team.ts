@@ -13,6 +13,8 @@
 import { RequestFile } from './models';
 
 export class Team {
+    'teamId'?: number;
+    'schoolId'?: number;
     'name'?: string;
     'displayName'?: string;
     'notes'?: string;
@@ -28,10 +30,21 @@ export class Team {
     'debater4First'?: string;
     'debater4Last'?: string;
     'debater4StudentId'?: number;
+    'archived'?: boolean;
 
     static discriminator: string | undefined = undefined;
 
     static attributeTypeMap: Array<{name: string, baseName: string, type: string}> = [
+        {
+            "name": "teamId",
+            "baseName": "team_id",
+            "type": "number"
+        },
+        {
+            "name": "schoolId",
+            "baseName": "school_id",
+            "type": "number"
+        },
         {
             "name": "name",
             "baseName": "name",
@@ -106,6 +119,11 @@ export class Team {
             "name": "debater4StudentId",
             "baseName": "debater4_student_id",
             "type": "number"
+        },
+        {
+            "name": "archived",
+            "baseName": "archived",
+            "type": "boolean"
         }    ];
 
     static getAttributeTypeMap() {
