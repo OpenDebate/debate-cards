@@ -110,7 +110,8 @@
           "school_id",
           "name",
           "caselist_id",
-          "display_name"
+          "display_name",
+          "archived"
         ],
         "properties": {
           "school_id": {
@@ -150,7 +151,8 @@
           "name",
           "display_name",
           "debater1_first",
-          "debater1_last"
+          "debater1_last",
+          "archived"
         ],
         "properties": {
           "team_id": {

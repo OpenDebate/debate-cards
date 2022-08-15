@@ -118,6 +118,7 @@ model School {
   displayName String
   state       String?
   chapterId   Int?
+  archived    Boolean
 
   caselist   Caselist @relation(fields: [caselistId], references: [caselistId])
   caselistId Int
@@ -146,6 +147,7 @@ model Team {
   debater4First     String?
   debater4Last      String?
   debater4StudentId Int?
+  archived          Boolean
 
   school   School @relation(fields: [schoolId], references: [schoolId])
   schoolId Int

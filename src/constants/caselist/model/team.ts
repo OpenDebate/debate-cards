@@ -30,7 +30,7 @@ export class Team {
     'debater4First'?: string;
     'debater4Last'?: string;
     'debater4StudentId'?: number;
-    'archived'?: boolean;
+    'archived': boolean;
 
     static discriminator: string | undefined = undefined;
 

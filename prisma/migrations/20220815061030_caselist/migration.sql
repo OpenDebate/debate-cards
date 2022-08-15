@@ -26,6 +26,7 @@ CREATE TABLE "School" (
     "displayName" TEXT NOT NULL,
     "state" TEXT,
     "chapterId" INTEGER,
+    "archived" BOOLEAN NOT NULL,
     "caselistId" INTEGER NOT NULL,
 
     CONSTRAINT "School_pkey" PRIMARY KEY ("id")
@@ -52,6 +53,7 @@ CREATE TABLE "Team" (
     "debater4First" TEXT,
     "debater4Last" TEXT,
     "debater4StudentId" INTEGER,
+    "archived" BOOLEAN NOT NULL,
     "schoolId" INTEGER NOT NULL,
 
     CONSTRAINT "Team_pkey" PRIMARY KEY ("id")

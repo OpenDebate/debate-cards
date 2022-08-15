@@ -19,7 +19,7 @@ export class School {
     'displayName': string;
     'state'?: string | null;
     'chapterId'?: number;
-    'archived'?: boolean;
+    'archived': boolean;
 
     static discriminator: string | undefined = undefined;
 
