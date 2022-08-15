@@ -1,10 +1,10 @@
 import addFile from 'app/actions/addFile';
 import generateFile from 'app/actions/generateFile';
-import 'app/modules/parser';
-import 'app/modules/deduplicator';
+// import 'app/modules/parser';
+// import 'app/modules/deduplicator';
 import { db } from './lib';
 import { readdir, writeFile } from 'fs/promises';
-import { caselist } from './lib/caselist';
+import caselist from './modules/caselist';
 
 async function loadDir(dir: string) {
   const files = (await readdir(dir)).map((file) => ({
@@ -28,8 +28,7 @@ async function makeFile(id: number) {
 
 (async () => {
   try {
-    const data = await caselist.getCaselists();
-    await Promise.all(data.body.map((c) => caselist.getSchools(c.name).then((data) => console.log(data.body))));
+    caselist.caselistQueue.load();
   } catch (error) {
     console.error(error);
   }
