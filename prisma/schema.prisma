@@ -56,6 +56,9 @@ model File {
   evidenceSet   EvidenceSet? @relation(fields: [evidenceSetId], references: [id])
   evidenceSetId Int?
 
+  round   Round? @relation(fields: [roundId], references: [id])
+  roundId Int?   @unique
+
   evidence Evidence[]
   tags     Tags[]
 }
@@ -168,6 +171,7 @@ model Round {
   judge          String
   report         String
   opensourcePath String?
+  opensource     File?
   video          String?
   tournId        Int?
   externalId     Int?
