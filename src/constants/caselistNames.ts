@@ -54,3 +54,9 @@ export const OPENEV_TYPES = {
   t: 'Topicality',
   f: 'Framework',
 } as const;
+
+export const EVENT_NAMES = {
+  cx: 'Policy',
+  ld: 'Lincoln Douglas',
+  pf: 'Public Forum',
+};

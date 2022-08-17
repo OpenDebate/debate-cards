@@ -2,9 +2,9 @@ import addFile from 'app/actions/addFile';
 import generateFile from 'app/actions/generateFile';
 // import 'app/modules/parser';
 // import 'app/modules/deduplicator';
+import caselist from './modules/caselist';
 import { db } from './lib';
 import { readdir, writeFile } from 'fs/promises';
-import caselist from './modules/caselist';
 
 async function loadDir(dir: string) {
   const files = (await readdir(dir)).map((file) => ({
@@ -29,7 +29,7 @@ async function makeFile(id: number) {
 (async () => {
   try {
     await caselist.openevQueue.load();
-    // await caselist.caselistQueue.load();
+    await caselist.caselistQueue.load();
   } catch (error) {
     console.error(error);
   }

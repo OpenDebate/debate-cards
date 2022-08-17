@@ -1,4 +1,4 @@
-import { CAMP_NAMES, OPENEV_TYPES } from 'app/constants/openevNames';
+import { CAMP_NAMES, OPENEV_TYPES } from 'app/constants/caselistNames';
 import { ModelFile } from 'app/constants/caselist/api';
 import { connectOrCreateTag } from 'app/lib';
 import addFile from './addFile';

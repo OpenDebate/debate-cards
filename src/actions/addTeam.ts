@@ -5,6 +5,7 @@ import downloadFile from './downloadFile';
 import { TeamLoadedEvent } from './addSchool';
 import { omit } from 'lodash';
 import path from 'path';
+import { EVENT_NAMES } from 'app/constants/caselistNames';
 
 export default async ({ caselist, school, team }: TeamLoadedEvent): Promise<number> => {
   const saved = await db.team.upsert(caselistToPrisma(team, 'teamId', 'schoolId'));
@@ -15,11 +16,25 @@ export default async ({ caselist, school, team }: TeamLoadedEvent): Promise<numb
       const saveData = { ...omit(round, 'opensource'), opensourcePath: round.opensource };
       const saved = await db.round.upsert(caselistToPrisma(saveData, 'roundId', 'teamId'));
       if (round.opensource) {
+        const tags = [
+          connectOrCreateTag('wiki', 'Wiki'),
+          connectOrCreateTag(caselist.name, caselist.displayName),
+          connectOrCreateTag(caselist.year.toString(), caselist.year.toString()),
+          connectOrCreateTag(caselist.level, caselist.level === 'college' ? 'College' : 'High School'),
+          connectOrCreateTag(caselist.event, EVENT_NAMES[caselist.event]),
+          connectOrCreateTag(school.name, school.displayName),
+          connectOrCreateTag(
+            `${caselist.name}/${school.name}/${team.name}`,
+            `${caselist.displayName}/${school.displayName}/${team.displayName}`,
+          ),
+          connectOrCreateTag(`wiki${round.side}`, `Wiki ${round.side === 'A' ? 'Affirmative' : 'Negative'}`),
+        ];
         await downloadFile(round.opensource);
         await addFile({
           path: `./documents/${round.opensource}`,
           name: path.parse(round.opensource).name,
           round: { connect: { id: saved.id } },
+          tags: { connectOrCreate: tags },
         });
       }
     }),
