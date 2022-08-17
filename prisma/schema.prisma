@@ -53,25 +53,11 @@ model File {
   path   String
   status FileStatus @default(PENDING)
 
-  evidenceSet   EvidenceSet? @relation(fields: [evidenceSetId], references: [id])
-  evidenceSetId Int?
-
   round   Round? @relation(fields: [roundId], references: [id])
   roundId Int?   @unique
 
   evidence Evidence[]
   tags     Tags[]
-}
-
-model EvidenceSet {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  name  String
-  label String
-
-  files File[]
 }
 
 enum FileStatus {
