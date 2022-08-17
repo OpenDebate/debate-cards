@@ -379,7 +379,7 @@
             "type": "integer",
             "minimum": 1
           },
-          "title": {
+          "name": {
             "type": "string"
           },
           "path": {
@@ -396,12 +396,6 @@
           },
           "tags": {
             "type": "object"
-          },
-          "file": {
-            "type": "string"
-          },
-          "filename": {
-            "type": "string"
           }
         }
       },

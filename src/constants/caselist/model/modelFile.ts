@@ -14,14 +14,12 @@ import { RequestFile } from './models';
 
 export class ModelFile {
     'openevId'?: number;
-    'title'?: string;
+    'name'?: string;
     'path'?: string;
     'year'?: number;
     'camp'?: string;
     'lab'?: string;
     'tags'?: object;
-    'file'?: string;
-    'filename'?: string;
 
     static discriminator: string | undefined = undefined;
 
@@ -32,8 +30,8 @@ export class ModelFile {
             "type": "number"
         },
         {
-            "name": "title",
-            "baseName": "title",
+            "name": "name",
+            "baseName": "name",
             "type": "string"
         },
         {
@@ -60,16 +58,6 @@ export class ModelFile {
             "name": "tags",
             "baseName": "tags",
             "type": "object"
-        },
-        {
-            "name": "file",
-            "baseName": "file",
-            "type": "string"
-        },
-        {
-            "name": "filename",
-            "baseName": "filename",
-            "type": "string"
         }    ];
 
     static getAttributeTypeMap() {
