@@ -86,11 +86,10 @@ model Tags {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name  String
+  name  String @unique
   label String
 
-  file   File @relation(fields: [fileId], references: [id])
-  fileId Int
+  files File[]
 }
 
 model Caselist {
