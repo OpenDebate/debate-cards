@@ -1,5 +1,5 @@
 import { makeId } from 'app/lib/debate-tools';
-import { db, TypedEvent } from 'app/lib';
+import { ActionQueue, db, TypedEvent } from 'app/lib';
 import { readFile } from 'fs/promises';
 import { Prisma } from '@prisma/client';
 
@@ -8,19 +8,31 @@ type ExcludedFileFields = 'gid' | 'status';
 export type FileData = Omit<Prisma.FileCreateInput, ExcludedFileFields>;
 
 export const onAddFile = new TypedEvent<{ gid: string }>();
+const onFileLoaded = new TypedEvent<{ data: FileData & { gid: string }; resolve: (value: unknown) => void }>();
+
+new ActionQueue(
+  async ({ data, resolve }: { data: FileData & { gid: string }; resolve: () => void }): Promise<void> => {
+    try {
+      const doc = await db.file.upsert({
+        where: { gid: data.gid },
+        create: { ...data, status: 'PENDING' },
+        update: data,
+        select: { gid: true },
+      });
+      onAddFile.emit({ gid: doc.gid });
+    } catch (e) {
+      console.error('Failed to add file:', JSON.stringify(data, null, 2));
+      throw e;
+    }
+    return resolve();
+  },
+  1,
+  onFileLoaded,
+);
 
 export default async (data: FileData): Promise<void> => {
   const buffer = await readFile(data.path);
 
   const { fileId: gid } = await makeId(buffer);
-  const doc = await db.file.upsert({
-    where: { gid },
-    create: { ...data, gid, status: 'PENDING' },
-    update: { ...data, tags: {} },
-    select: { gid: true },
-  });
-
-  onAddFile.emit({ gid: doc.gid });
-
-  return;
+  new Promise((resolve) => onFileLoaded.emit({ data: { ...data, gid }, resolve }));
 };
