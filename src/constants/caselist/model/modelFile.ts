@@ -19,7 +19,7 @@ export class ModelFile {
     'year'?: number;
     'camp'?: string;
     'lab'?: string;
-    'tags'?: object;
+    'tags'?: string;
 
     static discriminator: string | undefined = undefined;
 
@@ -57,7 +57,7 @@ export class ModelFile {
         {
             "name": "tags",
             "baseName": "tags",
-            "type": "object"
+            "type": "string"
         }    ];
 
     static getAttributeTypeMap() {

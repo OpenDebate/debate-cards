@@ -16,7 +16,7 @@ export default async (data: FileData): Promise<void> => {
   const doc = await db.file.upsert({
     where: { gid },
     create: { ...data, gid, status: 'PENDING' },
-    update: { ...data },
+    update: { ...data, tags: {} },
     select: { gid: true },
   });
 
