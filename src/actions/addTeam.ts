@@ -41,7 +41,7 @@ export default async ({ caselist, school, team }: TeamLoadedEvent): Promise<numb
   );
 
   const { body: cites } = await caselistApi.getCites(caselist.name, school.name, saved.name);
-  await Promise.all(cites.map((cite) => db.cite.upsert(caselistToPrisma(cite, 'citeId', 'roundId'))));
+  await Promise.all(cites.map((cite) => cite.cites && db.cite.upsert(caselistToPrisma(cite, 'citeId', 'roundId'))));
 
   return saved.id;
 };
