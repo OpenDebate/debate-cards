@@ -8,8 +8,12 @@ caselistApi.setApiKey(DefaultApiApiKeys.cookie, process.env.CASELIST_TOKEN);
 
 // Every REQUEST_WAIT milliseconds, allow a request through
 const requestQueue = new Queue<{ resolve: () => void }>();
+const downloadQueue = new Queue<{ resolve: () => void }>();
 setInterval(() => requestQueue.dequeue()?.resolve(), REQUEST_WAIT);
-caselistApi.addInterceptor(() => new Promise((resolve) => requestQueue.enqueue({ resolve })));
+setInterval(() => downloadQueue.dequeue()?.resolve(), 12.1 * 1000);
+caselistApi.addInterceptor(
+  (req) => new Promise((resolve) => (req.uri.endsWith('download') ? downloadQueue : requestQueue).enqueue({ resolve })),
+);
 
 // This is pretty overcomplicated so types work, but repeating the same code over and over bothered me
 
