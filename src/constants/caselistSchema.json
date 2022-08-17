@@ -891,7 +891,8 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/File"
+                  "type": "string",
+                  "format": "binary"
                 }
               }
             }
