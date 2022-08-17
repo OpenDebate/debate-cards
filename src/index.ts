@@ -28,7 +28,8 @@ async function makeFile(id: number) {
 
 (async () => {
   try {
-    caselist.caselistQueue.load();
+    await caselist.openevQueue.load();
+    await caselist.caselistQueue.load();
   } catch (error) {
     console.error(error);
   }
