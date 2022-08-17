@@ -10,7 +10,7 @@ caselistApi.setApiKey(DefaultApiApiKeys.cookie, process.env.CASELIST_TOKEN);
 const requestQueue = new Queue<{ resolve: () => void }>();
 const downloadQueue = new Queue<{ resolve: () => void }>();
 setInterval(() => requestQueue.dequeue()?.resolve(), REQUEST_WAIT);
-setInterval(() => downloadQueue.dequeue()?.resolve(), 12.1 * 1000);
+setInterval(() => downloadQueue.dequeue()?.resolve(), 12.5 * 1000);
 caselistApi.addInterceptor(
   (req) => new Promise((resolve) => (req.uri.endsWith('download') ? downloadQueue : requestQueue).enqueue({ resolve })),
 );
