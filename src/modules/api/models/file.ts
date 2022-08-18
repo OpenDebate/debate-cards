@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Field, ID, ObjectType } from 'type-graphql';
 import { File as FileSchema } from '@prisma/client';
-import { Tag } from './tag';
+import { Tag, Evidence } from '.';
 
 @ObjectType()
 export class File implements Partial<FileSchema> {
@@ -10,6 +10,9 @@ export class File implements Partial<FileSchema> {
 
   @Field()
   name: string;
+
+  @Field((type) => [Evidence])
+  evidence: Evidence[];
 
   @Field((type) => [Tag])
   tags: Tag[];

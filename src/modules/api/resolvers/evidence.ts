@@ -3,7 +3,7 @@ import { db } from 'app/lib/db';
 import { selectFields } from 'app/lib/graphql';
 import { Arg, Info, Query, Resolver } from 'type-graphql';
 import { GraphQLResolveInfo } from 'graphql';
-import { Evidence } from '../models/evidence';
+import { Evidence } from '../models';
 
 @Resolver(Evidence)
 export class EvidenceResolver {
