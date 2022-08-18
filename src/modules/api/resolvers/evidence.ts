@@ -41,6 +41,8 @@ export class EvidenceResolver extends EvidenceGetResolver {
     });
     console.timeEnd('search');
     const ids: number[] = flatMap(results.hits.hits, 'fields.id');
-    return await db.evidence.findMany({ where: { id: { in: ids } }, select: selectFields(info) });
+    const evidence = await db.evidence.findMany({ where: { id: { in: ids } }, select: selectFields(info) });
+    // Resort results based on ranking
+    return evidence.sort((a: { id: number }, b: { id: number }) => ids.indexOf(a.id) - ids.indexOf(b.id));
   }
 }
