@@ -18,3 +18,4 @@ export function createGetResolver<T extends ClassType>(name: string, model: T) {
 export * from './evidence';
 export * from './file';
 export * from './caselist';
+export * from './evidenceBucket';

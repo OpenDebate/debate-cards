@@ -6,3 +6,4 @@ export * from './school';
 export * from './team';
 export * from './round';
 export * from './cite';
+export * from './evidenceBucket';
