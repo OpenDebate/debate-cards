@@ -16,7 +16,7 @@ export class EvidenceResolver extends EvidenceGetResolver {
   // A lot of things are hard coded at the moment, in the future could be made customizable
   @Query((returns) => [Evidence])
   async search(
-    @Args() { query, fields, tags }: EvidenceSearchArgs,
+    @Args() { query, fields, tags, duplicateWeight }: EvidenceSearchArgs,
     @Info() info: GraphQLResolveInfo,
   ): Promise<Partial<Evidence>[]> {
     // Does a search in elastic that only returns ids, then queries those ids from postgres
@@ -40,7 +40,8 @@ export class EvidenceResolver extends EvidenceGetResolver {
                 {
                   script_score: {
                     script: {
-                      source: "_score * Math.sqrt(doc['duplicateCount'].value)",
+                      params: { duplicateWeight },
+                      source: "_score * Math.pow(doc['duplicateCount'].value, params.duplicateWeight)",
                     },
                   },
                 },

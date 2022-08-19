@@ -44,4 +44,11 @@ export class EvidenceSearchArgs {
 
   @Field((type) => [String], { nullable: true })
   tags?: string[];
+
+  @Field((type) => Float, {
+    defaultValue: 0.5,
+    description:
+      'Strength of boost to cards that appear in more rounds. Final score is calculated as: baseScore * numDuplicates^duplicateWeight. Should almost always be between 0-1',
+  })
+  duplicateWeight: number;
 }
