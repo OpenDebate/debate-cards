@@ -40,5 +40,8 @@ export class EvidenceSearchArgs {
       { field: SearchableEvidenceField.spoken, weight: 1 },
     ] as EvidenceSearchField[],
   })
-  fields?: EvidenceSearchField[];
+  fields: EvidenceSearchField[];
+
+  @Field((type) => [String], { nullable: true })
+  tags?: string[];
 }

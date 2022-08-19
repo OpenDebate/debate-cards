@@ -16,7 +16,7 @@ export class EvidenceResolver extends EvidenceGetResolver {
   // A lot of things are hard coded at the moment, in the future could be made customizable
   @Query((returns) => [Evidence])
   async search(
-    @Args() { query, fields }: EvidenceSearchArgs,
+    @Args() { query, fields, tags }: EvidenceSearchArgs,
     @Info() info: GraphQLResolveInfo,
   ): Promise<Partial<Evidence>[]> {
     // Does a search in elastic that only returns ids, then queries those ids from postgres
@@ -26,24 +26,42 @@ export class EvidenceResolver extends EvidenceGetResolver {
       index: 'evidence',
       size: 10,
       query: {
-        function_score: {
-          query: {
-            query_string: {
-              query,
-              type: 'most_fields', // sums scores from each field
-              fields: fields.map(({ field, weight }) => `${SearchableEvidenceField[field]}^${weight}`),
-            },
-          },
-          functions: [
-            {
-              script_score: {
-                script: {
-                  source: "_score * Math.sqrt(doc['duplicateCount'].value)",
+        bool: {
+          must: {
+            function_score: {
+              query: {
+                query_string: {
+                  query,
+                  type: 'most_fields', // sums scores from each field
+                  fields: fields.map(({ field, weight }) => `${SearchableEvidenceField[field]}^${weight}`),
                 },
               },
+              functions: [
+                {
+                  script_score: {
+                    script: {
+                      source: "_score * Math.sqrt(doc['duplicateCount'].value)",
+                    },
+                  },
+                },
+              ],
+              boost_mode: 'replace',
             },
-          ],
-          boost_mode: 'replace',
+          },
+          filter: tags
+            ? {
+                terms_set: {
+                  'File.Tags': {
+                    terms: tags.map((tag) => tag.toLowerCase()), // For some reason only lowercase works
+                    // Number of tags matched has to equal number of tags in query
+                    minimum_should_match_script: {
+                      params: { numTags: tags.length },
+                      source: 'params.numTags',
+                    },
+                  },
+                },
+              }
+            : undefined,
         },
       },
       collapse: {
