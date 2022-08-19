@@ -16,7 +16,7 @@ export class EvidenceResolver extends EvidenceGetResolver {
   // A lot of things are hard coded at the moment, in the future could be made customizable
   @Query((returns) => [Evidence])
   async search(
-    @Args() { query, fields, tags, duplicateWeight }: EvidenceSearchArgs,
+    @Args() { query, size, fields, tags, duplicateWeight }: EvidenceSearchArgs,
     @Info() info: GraphQLResolveInfo,
   ): Promise<Partial<Evidence>[]> {
     // Does a search in elastic that only returns ids, then queries those ids from postgres
@@ -24,7 +24,7 @@ export class EvidenceResolver extends EvidenceGetResolver {
     console.time('search');
     const results = await elastic.search({
       index: 'evidence',
-      size: 10,
+      size,
       query: {
         bool: {
           must: {

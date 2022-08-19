@@ -1,4 +1,4 @@
-import { ArgsType, Field, Float, InputType, registerEnumType } from 'type-graphql';
+import { ArgsType, Field, Float, InputType, Int, registerEnumType } from 'type-graphql';
 
 // Not sure if there is a better or more type safe way to do this
 export enum SearchableEvidenceField {
@@ -27,6 +27,9 @@ class EvidenceSearchField {
 export class EvidenceSearchArgs {
   @Field()
   query: string;
+
+  @Field((type) => Int, { defaultValue: 10 })
+  size: number;
 
   @Field((type) => [EvidenceSearchField], {
     // These defaults are basically random, could be adjusted
