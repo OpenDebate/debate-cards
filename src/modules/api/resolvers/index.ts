@@ -19,3 +19,4 @@ export * from './evidence';
 export * from './file';
 export * from './caselist';
 export * from './evidenceBucket';
+export * from './tag';
