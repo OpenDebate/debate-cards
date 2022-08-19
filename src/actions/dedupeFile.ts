@@ -11,9 +11,13 @@ export default async ({ gid }: { gid: string }): Promise<any> => {
   const lock = (updateLock[parent] = new Lock());
 
   Children.set(parent, updates);
+  /* 
+    Counts are currently slightly higher than they should be for large buckets, might be related to evidence being added to the bucket multiple times
+    Counts are also not properly reset when a bucket is emptied
+  */
   const bucket = await db.evidenceBucket.upsert({
     where: { rootId: parent },
-    create: { rootId: parent },
+    create: { rootId: parent, count: 1 },
     update: { count: { increment: updates.length } },
   });
   await db.evidence.updateMany({
