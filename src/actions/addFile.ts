@@ -22,9 +22,9 @@ new ActionQueue(
       onAddFile.emit({ gid: doc.gid });
     } catch (e) {
       console.error('Failed to add file:', JSON.stringify(data, null, 2));
-      throw e;
+    } finally {
+      resolve();
     }
-    return resolve();
   },
   1,
   onFileLoaded,
