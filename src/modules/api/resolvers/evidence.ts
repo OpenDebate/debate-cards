@@ -1,7 +1,8 @@
 import 'reflect-metadata';
 import { Evidence } from '../models';
+import { EvidenceSearchArgs, SearchableEvidenceField } from '../inputs';
 import { createGetResolver } from '.';
-import { Args, ArgsType, Field, Info, Query, Resolver } from 'type-graphql';
+import { Args, Info, Query, Resolver } from 'type-graphql';
 import { GraphQLResolveInfo } from 'graphql';
 import { elastic } from 'app/lib/elastic';
 import { flatMap } from 'lodash';
@@ -10,17 +11,14 @@ import { selectFields } from 'app/lib/graphql';
 
 const EvidenceGetResolver = createGetResolver('evidence', Evidence);
 
-@ArgsType()
-class EvidenceSearchArgs {
-  @Field()
-  query: string;
-}
-
 @Resolver()
 export class EvidenceResolver extends EvidenceGetResolver {
   // A lot of things are hard coded at the moment, in the future could be made customizable
   @Query((returns) => [Evidence])
-  async search(@Args() { query }: EvidenceSearchArgs, @Info() info: GraphQLResolveInfo): Promise<Partial<Evidence>[]> {
+  async search(
+    @Args() { query, fields }: EvidenceSearchArgs,
+    @Info() info: GraphQLResolveInfo,
+  ): Promise<Partial<Evidence>[]> {
     // Does a search in elastic that only returns ids, then queries those ids from postgres
     // Not sure if this is the best approach but otherwise it would be more difficult to do relational queries
     console.time('search');
@@ -33,7 +31,7 @@ export class EvidenceResolver extends EvidenceGetResolver {
             query_string: {
               query,
               type: 'most_fields', // sums scores from each field
-              fields: ['tag^2', 'fullcite', 'fulltext'],
+              fields: fields.map(({ field, weight }) => `${SearchableEvidenceField[field]}^${weight}`),
             },
           },
           functions: [
