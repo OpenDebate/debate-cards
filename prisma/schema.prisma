@@ -57,7 +57,7 @@ model File {
   roundId Int?   @unique
 
   evidence Evidence[]
-  tags     Tags[]
+  tags     Tag[]
 }
 
 enum FileStatus {
@@ -67,7 +67,7 @@ enum FileStatus {
   ERROR
 }
 
-model Tags {
+model Tag {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

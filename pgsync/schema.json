@@ -51,7 +51,7 @@
                     },
                     "children": [
                         {
-                            "table": "Tags",
+                            "table": "Tag",
                             "columns": [
                                 "name"
                             ],
@@ -59,7 +59,7 @@
                                 "variant": "scalar",
                                 "type": "one_to_many",
                                 "through_tables": [
-                                    "_FileToTags"
+                                    "_FileToTag"
                                 ]
                             }
                         }
