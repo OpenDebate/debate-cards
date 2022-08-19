@@ -36,7 +36,7 @@ export class EvidenceResolver extends EvidenceGetResolver {
     const filter = tags
       ? {
           terms_set: {
-            'File.Tags': {
+            'File.tags': {
               terms: tags.map((tag) => tag.toLowerCase()), // For some reason only lowercase works
               // Number of tags matched has to equal number of tags in query
               minimum_should_match_script: { params: { numTags: tags.length }, source: 'params.numTags' },

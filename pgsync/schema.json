@@ -49,9 +49,17 @@
                         "variant": "object",
                         "type": "one_to_one"
                     },
+                    "transform": {
+                        "mapping": {
+                            "tags": {
+                                "type": "keyword"
+                            }
+                        }
+                    },
                     "children": [
                         {
                             "table": "Tag",
+                            "label": "tags",
                             "columns": [
                                 "name"
                             ],
