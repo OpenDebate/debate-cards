@@ -29,7 +29,8 @@ export class EvidenceResolver extends EvidenceGetResolver {
       script_score: {
         script: {
           params: { duplicateWeight },
-          source: "_score * Math.pow(doc['duplicateCount'].value, params.duplicateWeight)",
+          source:
+            "_score * Math.pow(doc['duplicateCount'].size() == 0 ? 1 : doc['duplicateCount'].value, params.duplicateWeight)",
         },
       },
     } as const;
