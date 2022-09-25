@@ -112,6 +112,8 @@ model School {
   caselistId Int
 
   teams Team[]
+
+  @@unique([name, caselistId])
 }
 
 model Team {
@@ -141,6 +143,8 @@ model Team {
   schoolId Int
 
   rounds Round[]
+
+  @@unique([name, schoolId])
 }
 
 model Round {
