@@ -5,10 +5,8 @@ import { Info, Query, Resolver } from 'type-graphql';
 import { createGetResolver } from '.';
 import { Tag } from '../models';
 
-const TagGetResolver = createGetResolver('tag', Tag);
-
-@Resolver()
-export class TagResolver extends TagGetResolver {
+@Resolver(Tag)
+export class TagResolver extends createGetResolver('tag', Tag) {
   @Query((returns) => [Tag])
   async tags(@Info() info: GraphQLResolveInfo) {
     return db.tag.findMany({ select: selectFields(info) });

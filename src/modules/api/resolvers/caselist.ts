@@ -7,9 +7,8 @@ import { db } from 'app/lib/db';
 import { GraphQLResolveInfo } from 'graphql';
 import { CaselistInput, SchoolInput, TeamInput } from '../inputs';
 
-const CaselistGetResolver = createGetResolver('caselist', Caselist);
-@Resolver()
-class CaselistResolver extends CaselistGetResolver {
+@Resolver(Caselist)
+class CaselistResolver extends createGetResolver('caselist', Caselist) {
   @Query((returns) => Caselist, { nullable: true })
   async caselistByName(
     @Args() { caselist }: CaselistInput,
@@ -19,9 +18,8 @@ class CaselistResolver extends CaselistGetResolver {
   }
 }
 
-const SchoolGetResolver = createGetResolver('school', School);
-@Resolver()
-class SchoolResolver extends SchoolGetResolver {
+@Resolver(School)
+class SchoolResolver extends createGetResolver('school', School) {
   @Query((returns) => School, { nullable: true })
   async schoolByName(
     @Args() { caselist, school }: SchoolInput,
@@ -34,9 +32,8 @@ class SchoolResolver extends SchoolGetResolver {
   }
 }
 
-const TeamGetResolver = createGetResolver('team', Team);
-@Resolver()
-class TeamResolver extends TeamGetResolver {
+@Resolver(Team)
+class TeamResolver extends createGetResolver('team', Team) {
   @Query((returns) => Team, { nullable: true })
   async teamByName(
     @Args() { caselist, school, team }: TeamInput,
@@ -49,12 +46,10 @@ class TeamResolver extends TeamGetResolver {
   }
 }
 
-const RoundGetResolver = createGetResolver('round', Round);
-@Resolver()
-class RoundResolver extends RoundGetResolver {}
+@Resolver(Round)
+class RoundResolver extends createGetResolver('round', Round) {}
 
-const CiteGetResolver = createGetResolver('cite', Cite);
-@Resolver()
-class CiteResolver extends CiteGetResolver {}
+@Resolver(Cite)
+class CiteResolver extends createGetResolver('cite', Cite) {}
 
 export const caselistResolvers = [CaselistResolver, SchoolResolver, TeamResolver, RoundResolver, CiteResolver];

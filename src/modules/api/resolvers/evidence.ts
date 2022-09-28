@@ -9,10 +9,8 @@ import { flatMap } from 'lodash';
 import { db } from 'app/lib';
 import { selectFields } from 'app/lib/graphql';
 
-const EvidenceGetResolver = createGetResolver('evidence', Evidence);
-
-@Resolver()
-export class EvidenceResolver extends EvidenceGetResolver {
+@Resolver(Evidence)
+export class EvidenceResolver extends createGetResolver('evidence', Evidence) {
   @Query((returns) => [Evidence])
   async search(
     @Args() { query, size, fields, tags, duplicateWeight }: EvidenceSearchArgs,
