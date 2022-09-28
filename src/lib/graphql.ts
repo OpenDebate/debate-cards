@@ -1,11 +1,12 @@
 import { GraphQLResolveInfo } from 'graphql';
 import graphqlFields from 'graphql-fields';
 
-const transformFields = (fields: any) =>
-  Object.entries(fields).reduce<any>((transformed, [key, value]) => {
-    if (key === '__arguments') return transformed;
-    transformed[key] = Object.keys(value).length > 0 ? { select: transformFields(value) } : true;
-    return transformed;
-  }, {});
+const transformFields = (fields: any) => {
+  return Object.fromEntries(
+    Object.entries(fields)
+      .filter(([key, value]) => Object.keys(value).length == 0) // Remove nested fields
+      .map(([key, value]) => [key, true]), // Transform into format for prisma select
+  );
+};
 
-export const selectFields = (info: GraphQLResolveInfo) => transformFields(graphqlFields(info));
+export const selectFields = (info: GraphQLResolveInfo) => ({ id: true, ...transformFields(graphqlFields(info)) });

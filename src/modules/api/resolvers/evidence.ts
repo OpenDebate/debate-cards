@@ -10,7 +10,7 @@ import { db } from 'app/lib';
 import { selectFields } from 'app/lib/graphql';
 
 @Resolver(Evidence)
-export class EvidenceResolver extends createGetResolver('evidence', Evidence) {
+export class EvidenceResolver extends createGetResolver('evidence', Evidence, ['file', 'bucket']) {
   @Query((returns) => [Evidence])
   async search(
     @Args() { query, size, fields, tags, duplicateWeight }: EvidenceSearchArgs,
