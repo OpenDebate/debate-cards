@@ -10,10 +10,10 @@ import { db } from 'app/lib';
 import { selectFields } from 'app/lib/graphql';
 
 @Resolver(Evidence)
-export class EvidenceResolver extends createGetResolver('evidence', Evidence, ['file', 'bucket']) {
+export class EvidenceResolver extends createGetResolver('evidence', Evidence, [{ name: 'file' }, { name: 'bucket' }]) {
   @Query((returns) => [Evidence])
   async search(
-    @Args() { query, size, fields, tags, duplicateWeight }: EvidenceSearchArgs,
+    @Args() { query, take, fields, tags, duplicateWeight }: EvidenceSearchArgs,
     @Info() info: GraphQLResolveInfo,
   ): Promise<Partial<Evidence>[]> {
     const searchQuery = {
@@ -48,7 +48,7 @@ export class EvidenceResolver extends createGetResolver('evidence', Evidence, ['
     // Not sure if this is the best approach but otherwise it would be more difficult to do relational queries
     const results = await elastic.search({
       index: 'evidence',
-      size,
+      size: take,
       query: {
         bool: {
           must: {

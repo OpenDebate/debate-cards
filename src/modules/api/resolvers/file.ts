@@ -25,7 +25,11 @@ class TagFilesInput {
 const tagSelect = (tags: string[]) => tags?.map((tag) => ({ tags: { some: { name: tag } } }));
 
 @Resolver(File)
-export class FileResolver extends createGetResolver('file', File, ['evidence', 'tags', 'round']) {
+export class FileResolver extends createGetResolver('file', File, [
+  { name: 'evidence', paginate: true },
+  { name: 'tags', paginate: true },
+  { name: 'round' },
+]) {
   @Query((returns) => [File], { nullable: true })
   async tagFiles(@Args() { every, some }: TagFilesInput, @Info() info: GraphQLResolveInfo): Promise<Partial<File>[]> {
     return db.file.findMany({

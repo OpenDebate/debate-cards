@@ -29,7 +29,7 @@ export class EvidenceSearchArgs {
   query: string;
 
   @Field((type) => Int, { defaultValue: 10 })
-  size: number;
+  take: number;
 
   @Field((type) => [EvidenceSearchField], {
     // These defaults are basically random, could be adjusted

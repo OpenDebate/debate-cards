@@ -7,7 +7,7 @@ import { GraphQLResolveInfo } from 'graphql';
 export function createGetResolver<T extends ClassType>(
   name: string,
   model: T,
-  relationFeilds: (keyof InstanceType<T>)[] = [],
+  relationFeilds: { name: keyof InstanceType<T>; paginate?: boolean }[] = [],
 ) {
   @Resolver(model, { isAbstract: true })
   abstract class BaseResolver {
@@ -18,15 +18,33 @@ export function createGetResolver<T extends ClassType>(
   }
 
   // Add relation resolvers
-  const GetResolver = relationFeilds.reduce((prev, relationFeild) => {
-    @Resolver(model, { isAbstract: true })
-    abstract class NextResolver extends prev {
-      @FieldResolver()
-      async [relationFeild](@Root() parent: InstanceType<T>, @Info() info: GraphQLResolveInfo) {
-        return db[name].findUnique({ where: { id: parent.id } })[relationFeild]({ select: selectFields(info) });
+  const GetResolver = relationFeilds.reduce((prev, { name: relationFeild, paginate }) => {
+    if (paginate) {
+      @Resolver(model, { isAbstract: true })
+      abstract class NextResolver extends prev {
+        @FieldResolver()
+        async [relationFeild](
+          @Arg('take') take: number,
+          @Arg('skip', { defaultValue: 0 }) skip: number,
+          @Root() parent: InstanceType<T>,
+          @Info() info: GraphQLResolveInfo,
+        ) {
+          return db[name]
+            .findUnique({ where: { id: parent.id } })
+            [relationFeild]({ skip, take, select: selectFields(info) });
+        }
       }
+      return NextResolver;
+    } else {
+      @Resolver(model, { isAbstract: true })
+      abstract class NextResolver extends prev {
+        @FieldResolver()
+        async [relationFeild](@Root() parent: InstanceType<T>, @Info() info: GraphQLResolveInfo) {
+          return db[name].findUnique({ where: { id: parent.id } })[relationFeild]({ select: selectFields(info) });
+        }
+      }
+      return NextResolver;
     }
-    return NextResolver;
   }, BaseResolver);
 
   return GetResolver;

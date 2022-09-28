@@ -8,7 +8,7 @@ import { GraphQLResolveInfo } from 'graphql';
 import { CaselistInput, SchoolInput, TeamInput } from '../inputs';
 
 @Resolver(Caselist)
-class CaselistResolver extends createGetResolver('caselist', Caselist, ['schools']) {
+class CaselistResolver extends createGetResolver('caselist', Caselist, [{ name: 'schools', paginate: true }]) {
   @Query((returns) => Caselist, { nullable: true })
   async caselistByName(
     @Args() { caselist }: CaselistInput,
@@ -19,7 +19,10 @@ class CaselistResolver extends createGetResolver('caselist', Caselist, ['schools
 }
 
 @Resolver(School)
-class SchoolResolver extends createGetResolver('school', School, ['teams', 'caselist']) {
+class SchoolResolver extends createGetResolver('school', School, [
+  { name: 'teams', paginate: true },
+  { name: 'caselist' },
+]) {
   @Query((returns) => School, { nullable: true })
   async schoolByName(
     @Args() { caselist, school }: SchoolInput,
@@ -33,7 +36,7 @@ class SchoolResolver extends createGetResolver('school', School, ['teams', 'case
 }
 
 @Resolver(Team)
-class TeamResolver extends createGetResolver('team', Team, ['rounds', 'school']) {
+class TeamResolver extends createGetResolver('team', Team, [{ name: 'rounds', paginate: true }, { name: 'school' }]) {
   @Query((returns) => Team, { nullable: true })
   async teamByName(
     @Args() { caselist, school, team }: TeamInput,
@@ -47,9 +50,13 @@ class TeamResolver extends createGetResolver('team', Team, ['rounds', 'school'])
 }
 
 @Resolver(Round)
-class RoundResolver extends createGetResolver('round', Round, ['team', 'cites', 'opensource']) {}
+class RoundResolver extends createGetResolver('round', Round, [
+  { name: 'cites', paginate: true },
+  { name: 'team' },
+  { name: 'opensource' },
+]) {}
 
 @Resolver(Cite)
-class CiteResolver extends createGetResolver('cite', Cite, ['round']) {}
+class CiteResolver extends createGetResolver('cite', Cite, [{ name: 'round' }]) {}
 
 export const caselistResolvers = [CaselistResolver, SchoolResolver, TeamResolver, RoundResolver, CiteResolver];
