@@ -1,5 +1,6 @@
-import { db, Children, Lock } from 'app/lib';
-import { findParent } from 'app/lib/debate-tools';
+import { db, Lock } from 'app/lib';
+import { Children } from 'app/lib/redis';
+import { findParent } from 'app/lib/debate-tools/duplicate';
 const updateLock: Record<number, Lock> = {};
 
 export default async ({ gid }: { gid: string }): Promise<any> => {

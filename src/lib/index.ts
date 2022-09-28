@@ -3,7 +3,6 @@ import { TypedEvent } from './events';
 
 export * from './debate-tools';
 export * from './db';
-export * from './redis';
 export * from './events';
 
 // XXX: hacky solution for typesafe async pipe
