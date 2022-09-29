@@ -2,12 +2,18 @@ import { db } from 'app/lib';
 import { selectFields } from 'app/lib/graphql';
 import { GraphQLResolveInfo } from 'graphql';
 import 'reflect-metadata';
-import { Args, ArgsType, Field, Info, Query, Resolver } from 'type-graphql';
+import { Args, ArgsType, Field, Info, Int, Query, Resolver } from 'type-graphql';
 import { createGetResolver } from '.';
 import { File } from '../models';
 
 @ArgsType()
 class TagFilesInput {
+  @Field((type) => Int)
+  take: number;
+
+  @Field((type) => Int, { defaultValue: 0 })
+  skip: number;
+
   @Field((type) => [String], {
     nullable: true,
     defaultValue: [],
@@ -31,8 +37,13 @@ export class FileResolver extends createGetResolver('file', File, [
   { name: 'round' },
 ]) {
   @Query((returns) => [File], { nullable: true })
-  async tagFiles(@Args() { every, some }: TagFilesInput, @Info() info: GraphQLResolveInfo): Promise<Partial<File>[]> {
+  async tagFiles(
+    @Args() { take, skip, every, some }: TagFilesInput,
+    @Info() info: GraphQLResolveInfo,
+  ): Promise<Partial<File>[]> {
     return db.file.findMany({
+      take,
+      skip,
       where: { AND: tagSelect(every), OR: tagSelect(some) },
       select: selectFields(info),
     });
