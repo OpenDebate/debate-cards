@@ -7,7 +7,7 @@ import { GraphQLResolveInfo } from 'graphql';
 export function createGetResolver<T extends ClassType>(
   name: string,
   model: T,
-  relationFeilds: { name: keyof InstanceType<T>; paginate?: boolean }[] = [],
+  relationFeilds: { name: keyof InstanceType<T>; paginate?: boolean; requirePagination?: boolean }[] = [],
 ) {
   @Resolver(model, { isAbstract: true })
   abstract class BaseResolver {
@@ -18,13 +18,13 @@ export function createGetResolver<T extends ClassType>(
   }
 
   // Add relation resolvers
-  const GetResolver = relationFeilds.reduce((prev, { name: relationFeild, paginate }) => {
+  const GetResolver = relationFeilds.reduce((prev, { name: relationFeild, paginate, requirePagination }) => {
     if (paginate) {
       @Resolver(model, { isAbstract: true })
       abstract class NextResolver extends prev {
         @FieldResolver()
         async [relationFeild](
-          @Arg('take') take: number,
+          @Arg('take', { nullable: !requirePagination }) take: number,
           @Arg('skip', { defaultValue: 0 }) skip: number,
           @Root() parent: InstanceType<T>,
           @Info() info: GraphQLResolveInfo,
