@@ -31,6 +31,9 @@ export class EvidenceSearchArgs {
   @Field((type) => Int, { defaultValue: 10 })
   take: number;
 
+  @Field((type) => Int, { defaultValue: 0 })
+  skip: number;
+
   @Field((type) => [EvidenceSearchField], {
     // These defaults are basically random, could be adjusted
     defaultValue: [

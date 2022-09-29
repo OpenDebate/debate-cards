@@ -13,7 +13,7 @@ import { selectFields } from 'app/lib/graphql';
 export class EvidenceResolver extends createGetResolver('evidence', Evidence, [{ name: 'file' }, { name: 'bucket' }]) {
   @Query((returns) => [Evidence])
   async search(
-    @Args() { query, take, fields, tags, duplicateWeight }: EvidenceSearchArgs,
+    @Args() { query, take, skip, fields, tags, duplicateWeight }: EvidenceSearchArgs,
     @Info() info: GraphQLResolveInfo,
   ): Promise<Partial<Evidence>[]> {
     const searchQuery = {
@@ -49,6 +49,7 @@ export class EvidenceResolver extends createGetResolver('evidence', Evidence, [{
     const results = await elastic.search({
       index: 'evidence',
       size: take,
+      from: skip,
       query: {
         bool: {
           must: {
