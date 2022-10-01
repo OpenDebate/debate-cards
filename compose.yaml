@@ -68,7 +68,7 @@ services:
     profiles:
       - tasks # Dont start by default
     volumes:
-      - ${DOCUMENT_PATH-:./documents}:/app/documents
+      - ${DOCUMENT_PATH:-./documents}:/app/documents
   api:
     build: .
     command: npm run dev:api
