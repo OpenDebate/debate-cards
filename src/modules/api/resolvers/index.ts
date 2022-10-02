@@ -50,6 +50,7 @@ export function createGetResolver<T extends ClassType>(
   return GetResolver;
 }
 
+export * from './auth';
 export * from './evidence';
 export * from './file';
 export * from './caselist';
