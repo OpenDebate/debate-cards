@@ -41,6 +41,9 @@ model Evidence {
   bucketId Int?
 
   root EvidenceBucket? @relation("root")
+
+  @@index([fileId])
+  @@index([bucketId])
 }
 
 model File {
@@ -58,6 +61,8 @@ model File {
 
   evidence Evidence[]
   tags     Tag[]
+
+  @@index([roundId])
 }
 
 enum FileStatus {
@@ -114,6 +119,7 @@ model School {
   teams Team[]
 
   @@unique([name, caselistId])
+  @@index([caselistId])
 }
 
 model Team {
@@ -145,6 +151,7 @@ model Team {
   rounds Round[]
 
   @@unique([name, schoolId])
+  @@index([teamId])
 }
 
 model Round {
@@ -168,6 +175,8 @@ model Round {
   team   Team   @relation(fields: [teamId], references: [teamId])
   teamId Int
   cites  Cite[]
+
+  @@index([teamId])
 }
 
 model Cite {
@@ -181,4 +190,6 @@ model Cite {
 
   round   Round @relation(fields: [roundId], references: [roundId])
   roundId Int
+
+  @@index([roundId])
 }
