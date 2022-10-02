@@ -8,7 +8,9 @@ import { GraphQLResolveInfo } from 'graphql';
 import { CaselistInput, SchoolInput, TeamInput } from '../inputs';
 
 @Resolver(Caselist)
-class CaselistResolver extends createGetResolver('caselist', Caselist, [{ name: 'schools', paginate: true }]) {
+class CaselistResolver extends createGetResolver('caselist', Caselist, [
+  { name: 'schools', paginate: true, defaultLength: 50 },
+]) {
   @Query((returns) => Caselist, { nullable: true })
   async caselistByName(
     @Args() { caselist }: CaselistInput,
@@ -20,7 +22,7 @@ class CaselistResolver extends createGetResolver('caselist', Caselist, [{ name: 
 
 @Resolver(School)
 class SchoolResolver extends createGetResolver('school', School, [
-  { name: 'teams', paginate: true },
+  { name: 'teams', paginate: true, defaultLength: 10 },
   { name: 'caselist' },
 ]) {
   @Query((returns) => School, { nullable: true })
@@ -36,7 +38,10 @@ class SchoolResolver extends createGetResolver('school', School, [
 }
 
 @Resolver(Team)
-class TeamResolver extends createGetResolver('team', Team, [{ name: 'rounds', paginate: true }, { name: 'school' }]) {
+class TeamResolver extends createGetResolver('team', Team, [
+  { name: 'rounds', paginate: true, defaultLength: 20 },
+  { name: 'school' },
+]) {
   @Query((returns) => Team, { nullable: true })
   async teamByName(
     @Args() { caselist, school, team }: TeamInput,
@@ -51,7 +56,7 @@ class TeamResolver extends createGetResolver('team', Team, [{ name: 'rounds', pa
 
 @Resolver(Round)
 class RoundResolver extends createGetResolver('round', Round, [
-  { name: 'cites', paginate: true },
+  { name: 'cites', paginate: true, defaultLength: 3 },
   { name: 'team' },
   { name: 'opensource' },
 ]) {}

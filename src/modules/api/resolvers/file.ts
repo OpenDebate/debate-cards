@@ -32,11 +32,14 @@ const tagSelect = (tags: string[]) => tags?.map((tag) => ({ tags: { some: { name
 
 @Resolver(File)
 export class FileResolver extends createGetResolver('file', File, [
-  { name: 'evidence', paginate: true },
-  { name: 'tags', paginate: true },
+  { name: 'evidence', paginate: true, defaultLength: 50 },
+  { name: 'tags', paginate: true, defaultLength: 10 },
   { name: 'round' },
 ]) {
-  @Query((returns) => [File], { nullable: true })
+  @Query((returns) => [File], {
+    nullable: true,
+    complexity: ({ args, childComplexity }) => 500 + args.take * childComplexity,
+  })
   async tagFiles(
     @Args() { take, skip, every, some }: TagFilesInput,
     @Info() info: GraphQLResolveInfo,

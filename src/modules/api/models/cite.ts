@@ -14,7 +14,7 @@ export class Cite implements Partial<CitesModel> {
   @Field()
   title: string;
 
-  @Field()
+  @Field({ complexity: 20 })
   cites: string;
 
   @Field((type) => Round)

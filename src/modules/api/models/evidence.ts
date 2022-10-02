@@ -18,10 +18,10 @@ export class Evidence implements Partial<EvidenceSchema> {
   @Field({ nullable: true })
   fullcite: string | null;
 
-  @Field({ nullable: true })
+  @Field({ nullable: true, complexity: 10 })
   fulltext: string | null;
 
-  @Field()
+  @Field({ complexity: 15 })
   markup: string;
 
   @Field({ nullable: true })

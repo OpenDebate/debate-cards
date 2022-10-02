@@ -11,7 +11,7 @@ import { selectFields } from 'app/lib/graphql';
 
 @Resolver(Evidence)
 export class EvidenceResolver extends createGetResolver('evidence', Evidence, [{ name: 'file' }, { name: 'bucket' }]) {
-  @Query((returns) => [Evidence])
+  @Query((returns) => [Evidence], { complexity: ({ args, childComplexity }) => 1000 + args.take * childComplexity })
   async search(
     @Args() { query, take, skip, fields, tags, duplicateWeight }: EvidenceSearchArgs,
     @Info() info: GraphQLResolveInfo,
