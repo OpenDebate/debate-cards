@@ -5,13 +5,14 @@ import * as jwt from 'jsonwebtoken';
 import { buildSchema } from 'type-graphql';
 import * as resolvers from './resolvers';
 import { API_PATH, API_PORT } from 'app/constants';
-import { rateLimitPlugin } from './plugins';
+import { rateLimitPlugin, RateLimitResolver } from './plugins';
 
 async function main() {
   const app = express();
 
   const schema = await buildSchema({
     resolvers: [
+      RateLimitResolver,
       resolvers.AuthResolver,
       resolvers.EvidenceResolver,
       resolvers.FileResolver,
@@ -24,17 +25,20 @@ async function main() {
   const server = new ApolloServer({
     schema,
     context: async ({ req }) => {
-      const header = req.headers.authorization;
-      if (!header) return { auth: null };
+      const auth = () => {
+        const header = req.headers.authorization;
+        if (!header) return null;
 
-      const token = header.split(' ')[1];
-      if (!token) return { auth: null };
+        const token = header.split(' ')[1];
+        if (!token) return null;
 
-      try {
-        return { auth: jwt.verify(token, process.env.JWT_SECRET) };
-      } catch (err) {
-        return { auth: null };
-      }
+        try {
+          return jwt.verify(token, process.env.JWT_SECRET);
+        } catch (err) {
+          return null;
+        }
+      };
+      return { auth: auth(), ip: req.ip };
     },
     plugins: [rateLimitPlugin(schema)],
   });

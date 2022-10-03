@@ -22,3 +22,8 @@ export const REQUEST_WAIT = 1000;
 export const API_PORT = process.env.API_PORT || 4000;
 export const API_PATH = process.env.GRAPHQL_PATH || '/graphql';
 export const MAX_COMPLEXITY = process.env.MAX_QUERY_COMPLEXITY || 100;
+// Maximum complexity points that can be per duration
+export const RATE_LIMIT_POINTS =
+  parseInt(process.env.RATE_LIMIT_POINTS) || (process.env.NODE_ENV === 'development' ? 1_000_000_000 : 1_000);
+// Duration in seconds
+export const RATE_LIMIT_DURATION = parseInt(process.env.RATE_LIMIT_DURATION) || 60;
