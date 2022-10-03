@@ -13,29 +13,29 @@ export class Evidence implements Partial<EvidenceSchema> {
   tag: string;
 
   @Field({ nullable: true })
-  cite: string | null;
+  cite?: string;
 
   @Field({ nullable: true })
-  fullcite: string | null;
+  fullcite?: string;
 
   @Field({ nullable: true, complexity: 10 })
-  fulltext: string | null;
+  fulltext?: string;
 
   @Field({ complexity: 15 })
   markup: string;
 
   @Field({ nullable: true })
-  pocket: string | null;
+  pocket?: string;
 
   @Field({ nullable: true })
-  hat: string | null;
+  hat?: string;
 
   @Field({ nullable: true })
-  block: string | null;
+  block?: string;
 
   @Field({ nullable: true })
-  file: FileModel | null;
+  file?: FileModel;
 
   @Field((type) => EvidenceBucket, { nullable: true })
-  bucket: EvidenceBucket | null;
+  bucket?: EvidenceBucket;
 }
