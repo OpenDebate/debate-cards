@@ -4,8 +4,8 @@ import { ApolloServer } from 'apollo-server-express';
 import * as jwt from 'jsonwebtoken';
 import { buildSchema } from 'type-graphql';
 import * as resolvers from './resolvers';
-import { fieldExtensionsEstimator, getComplexity, simpleEstimator } from 'graphql-query-complexity';
-import { API_PATH, API_PORT, MAX_COMPLEXITY } from 'app/constants';
+import { API_PATH, API_PORT } from 'app/constants';
+import { rateLimitPlugin } from './plugins';
 
 async function main() {
   const app = express();
@@ -36,29 +36,7 @@ async function main() {
         return { auth: null };
       }
     },
-    plugins: [
-      {
-        async requestDidStart() {
-          return {
-            async didResolveOperation({ context, request, document }) {
-              let complexity = getComplexity({
-                schema,
-                operationName: request.operationName,
-                query: document,
-                variables: request.variables,
-                estimators: [fieldExtensionsEstimator(), simpleEstimator({ defaultComplexity: 1 })],
-              });
-              if (complexity > 0 && complexity < 100) complexity = 100;
-              complexity = Math.floor(complexity / 100);
-              if (complexity > 100) {
-                throw new Error(`Query complexity of ${complexity} is greater than maximum ${MAX_COMPLEXITY}`);
-              }
-              if (complexity) console.log(`Query used ${complexity} complexity points`);
-            },
-          };
-        },
-      },
-    ],
+    plugins: [rateLimitPlugin(schema)],
   });
   await server.start();
   server.applyMiddleware({ app, path: API_PATH });
