@@ -17,3 +17,8 @@ export const SENTENCE_REGEX = /([.?!])+(?=\d*\s+[A-Z])/;
 
 // Wait between requests to caselist api in ms. Seems to be limited to 1500 requests every 15 minutes
 export const REQUEST_WAIT = 1000;
+
+// API constants
+export const API_PORT = process.env.API_PORT || 4000;
+export const API_PATH = process.env.GRAPHQL_PATH || '/graphql';
+export const MAX_COMPLEXITY = process.env.MAX_QUERY_COMPLEXITY || 100;

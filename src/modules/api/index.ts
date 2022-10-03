@@ -5,10 +5,7 @@ import * as jwt from 'jsonwebtoken';
 import { buildSchema } from 'type-graphql';
 import * as resolvers from './resolvers';
 import { fieldExtensionsEstimator, getComplexity, simpleEstimator } from 'graphql-query-complexity';
-
-const PORT = process.env.API_PORT || 4000;
-const PATH = process.env.GRAPHQL_PATH || '/graphql';
-const MAX_COMPLEXITY = process.env.MAX_QUERY_COMPLEXITY || 100;
+import { API_PATH, API_PORT, MAX_COMPLEXITY } from 'app/constants';
 
 async function main() {
   const app = express();
@@ -64,10 +61,10 @@ async function main() {
     ],
   });
   await server.start();
-  server.applyMiddleware({ app, path: PATH });
+  server.applyMiddleware({ app, path: API_PATH });
 
-  app.listen({ port: PORT }, () => {
-    console.log(`API running at http://localhost:${PORT}${PATH}`);
+  app.listen({ port: API_PORT }, () => {
+    console.log(`API running at http://localhost:${API_PORT}${API_PATH}`);
   });
 }
 main();
