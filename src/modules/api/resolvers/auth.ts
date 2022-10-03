@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { Field, ID, Mutation, ObjectType, Resolver } from 'type-graphql';
+import { Ctx, Field, ID, Mutation, ObjectType, Query, Resolver } from 'type-graphql';
 import * as jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 
@@ -9,10 +9,22 @@ class AuthInfo {
   token: string;
 }
 
+@ObjectType()
+class UserInfo {
+  @Field((type) => ID)
+  uid: string;
+}
+
 @Resolver()
 export class AuthResolver {
   @Mutation((returns) => AuthInfo)
   async login(): Promise<AuthInfo> {
-    return { token: jwt.sign({ uid: randomUUID() }, process.env.JWT_SECRET) };
+    const info: UserInfo = { uid: randomUUID() };
+    return { token: jwt.sign(info, process.env.JWT_SECRET) };
+  }
+
+  @Query((returns) => UserInfo, { nullable: true })
+  async userInfo(@Ctx() context: any): Promise<UserInfo> {
+    return context.auth;
   }
 }
