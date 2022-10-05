@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Field, ID, ObjectType } from 'type-graphql';
 import { Round as RoundModel } from '@prisma/client';
-import { File, Team, Cite } from '.';
+import { File, Team, Cite } from '..';
 
 @ObjectType()
 export class Round implements Partial<RoundModel> {
