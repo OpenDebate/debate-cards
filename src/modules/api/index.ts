@@ -20,6 +20,8 @@ async function main() {
       resolvers.TagResolver,
       ...resolvers.caselistResolvers,
     ],
+    // Return true if query dosent require admin, or user has admin
+    authChecker: ({ context }, roles) => !roles.includes('ADMIN') || context.auth?.admin,
   });
 
   const server = new ApolloServer({
