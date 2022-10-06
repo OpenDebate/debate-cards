@@ -4,10 +4,7 @@ import { Round as RoundModel } from '@prisma/client';
 import { File, Team, Cite } from '..';
 
 @ObjectType()
-export class Round implements Partial<RoundModel> {
-  @Field((type) => ID)
-  id: number;
-
+export class RoundBase implements Partial<RoundModel> {
   @Field((type) => ID)
   roundId: number;
 
@@ -32,9 +29,6 @@ export class Round implements Partial<RoundModel> {
   @Field({ nullable: true })
   opensourcePath?: string;
 
-  @Field((type) => File, { nullable: true })
-  opensource?: File;
-
   @Field({ nullable: true })
   video?: string;
 
@@ -43,6 +37,15 @@ export class Round implements Partial<RoundModel> {
 
   @Field({ nullable: true })
   externalId?: number;
+}
+
+@ObjectType()
+export class Round extends RoundBase implements Partial<RoundModel> {
+  @Field((type) => ID)
+  id: number;
+
+  @Field((type) => File, { nullable: true })
+  opensource?: File;
 
   @Field((type) => [Cite])
   cites: Cite[];

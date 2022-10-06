@@ -4,10 +4,7 @@ import { Team as TeamModel } from '@prisma/client';
 import { Round, School } from '.';
 
 @ObjectType()
-export class Team implements Partial<TeamModel> {
-  @Field((type) => ID)
-  id: number;
-
+export class TeamBase implements Partial<TeamModel> {
   @Field((type) => ID)
   teamId: number;
 
@@ -55,6 +52,12 @@ export class Team implements Partial<TeamModel> {
 
   @Field({ nullable: true })
   debater4StudentId?: number;
+}
+
+@ObjectType()
+export class Team extends TeamBase implements Partial<TeamModel> {
+  @Field((type) => ID)
+  id: number;
 
   @Field((type) => [Round])
   rounds: Round[];

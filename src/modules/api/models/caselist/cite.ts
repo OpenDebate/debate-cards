@@ -4,10 +4,7 @@ import { Cite as CitesModel } from '@prisma/client';
 import { Round } from '.';
 
 @ObjectType()
-export class Cite implements Partial<CitesModel> {
-  @Field((type) => ID)
-  id: number;
-
+export class CiteBase implements Partial<CitesModel> {
   @Field((type) => ID)
   citeId: number;
 
@@ -16,6 +13,12 @@ export class Cite implements Partial<CitesModel> {
 
   @Field({ complexity: 20 })
   cites: string;
+}
+
+@ObjectType()
+export class Cite extends CiteBase implements Partial<CitesModel> {
+  @Field((type) => ID)
+  id: number;
 
   @Field((type) => Round)
   round: Round;

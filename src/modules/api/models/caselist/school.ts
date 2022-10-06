@@ -4,10 +4,7 @@ import { School as SchoolModel } from '@prisma/client';
 import { Team, Caselist } from '.';
 
 @ObjectType()
-export class School implements Partial<SchoolModel> {
-  @Field((type) => ID)
-  id: number;
-
+export class SchoolBase implements Partial<SchoolModel> {
   @Field((type) => ID)
   schoolId: number;
 
@@ -22,6 +19,12 @@ export class School implements Partial<SchoolModel> {
 
   @Field({ nullable: true })
   chapterId?: number;
+}
+
+@ObjectType()
+export class School extends SchoolBase implements Partial<SchoolModel> {
+  @Field((type) => ID)
+  id: number;
 
   @Field((type) => [Team])
   teams: Team[];
