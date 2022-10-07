@@ -5,7 +5,7 @@ import { db, ActionQueue } from 'app/lib';
 
 export default {
   name: 'parser',
-  queue: new ActionQueue(parseFile, CONCURRENT_PARSERS, onAddFile, () =>
+  queue: new ActionQueue('parsing', parseFile, CONCURRENT_PARSERS, onAddFile, () =>
     db.file.findMany({ where: { status: { equals: 'PENDING' } }, select: { gid: true } }),
   ),
 };

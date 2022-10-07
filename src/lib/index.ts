@@ -39,6 +39,7 @@ export class Lock {
 export class ActionQueue<T> {
   public queue = new Queue<T>();
   constructor(
+    public name: string,
     public action: (data: T) => Promise<unknown>, // Action to preform
     concurency: number, // Number of actions to preform at once
     emitter?: TypedEvent<T>, // Optional emitter to capture events from

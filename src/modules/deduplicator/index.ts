@@ -5,5 +5,5 @@ import { ActionQueue } from 'app/lib';
 
 export default {
   name: 'deduplication',
-  queue: new ActionQueue(dedupeFile, CONCURRENT_DEDUPLICATION, onAddEvidence),
+  queue: new ActionQueue('deduplication', dedupeFile, CONCURRENT_DEDUPLICATION, onAddEvidence),
 };
