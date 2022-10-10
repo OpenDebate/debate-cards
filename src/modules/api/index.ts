@@ -14,6 +14,8 @@ async function main() {
     resolvers: [
       RateLimitResolver,
       resolvers.AuthResolver,
+      ...resolvers.QueueResolvers,
+
       resolvers.EvidenceResolver,
       resolvers.FileResolver,
       resolvers.EvidenceBucketResolver,

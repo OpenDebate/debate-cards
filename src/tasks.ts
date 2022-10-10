@@ -1,8 +1,9 @@
 import caselist from 'app/modules/caselist';
-import 'app/modules/parser';
+import parser from 'app/modules/parser';
 import 'app/modules/deduplicator';
 
 (async () => {
-  await caselist.openevQueue.load();
-  await caselist.caselistQueue.load();
+  caselist.openevQueue.load();
+  caselist.caselistQueue.load();
+  parser.queue.load();
 })();

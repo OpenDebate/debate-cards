@@ -13,7 +13,7 @@ export function createGetResolver<T extends ClassType>(
   name: string,
   model: T,
   relationFeilds: ({ name: keyof InstanceType<T> } & RelationInfo)[] = [],
-) {
+): abstract new (...args: any[]) => any {
   @Resolver(model, { isAbstract: true })
   abstract class BaseResolver {
     @Query((returns) => model, { name, nullable: true })
@@ -65,3 +65,5 @@ export * from './file';
 export * from './caselist';
 export * from './evidenceBucket';
 export * from './tag';
+// Has to be at end for import order to work
+export * from './tasks';
