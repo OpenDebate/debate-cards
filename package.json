@@ -29,6 +29,7 @@
     "jsonwebtoken": "^8.5.1",
     "limiter": "^2.1.0",
     "lodash": "^4.17.15",
+    "pm2-axon": "^4.0.1",
     "rate-limiter-flexible": "^2.3.11",
     "redis": "^4.0.4",
     "reflect-metadata": "^0.1.13",

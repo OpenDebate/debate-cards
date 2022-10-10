@@ -1,5 +1,7 @@
 import { Queue } from 'typescript-collections';
+import axon from 'pm2-axon';
 import { TypedEvent } from './events';
+import { IPC_PORT } from 'app/constants';
 
 export * from './debate-tools';
 export * from './db';
@@ -36,6 +38,15 @@ export class Lock {
     this.promise = new Promise((resolve) => (this.unlock = resolve));
   }
 }
+
+const ipcCallbacks: Record<string, () => any> = {};
+const ipcSocket = axon.socket('rep');
+ipcSocket.on('message', (queueName: string, reply: (data: any) => void) => {
+  if (!(queueName in ipcCallbacks)) return reply({ err: `No queue with name ${queueName} exists` });
+
+  reply(ipcCallbacks[queueName]());
+});
+
 export class ActionQueue<T> {
   public queue = new Queue<T>();
   constructor(
@@ -47,6 +58,18 @@ export class ActionQueue<T> {
   ) {
     if (emitter) emitter.on((data) => this.queue.enqueue(data));
     for (let i = 0; i < concurency; i++) this.drain();
+
+    // Only connect for process running an actionqueue
+    ipcSocket.connect(IPC_PORT, 'api');
+    ipcCallbacks[this.name] = () => {
+      const queueArray: T[] = [];
+      // Braces cause cant return number
+      this.queue.forEach((el) => {
+        queueArray.push(el);
+        return;
+      });
+      return queueArray;
+    };
   }
 
   async drain(): Promise<unknown> {
@@ -61,3 +84,5 @@ export class ActionQueue<T> {
     (await this.loader()).forEach((data) => this.queue.enqueue(data));
   }
 }
+
+export type QueueDataType<T> = T extends ActionQueue<infer U> ? U : never;
