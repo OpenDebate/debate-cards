@@ -2,6 +2,10 @@ import { Queue } from 'typescript-collections';
 import axon from 'pm2-axon';
 import { TypedEvent } from './events';
 import { IPC_PORT } from 'app/constants';
+import type parserModule from 'app/modules/parser';
+import type caselistModule from 'app/modules/caselist';
+import type deduplicationModule from 'app/modules/deduplicator';
+import type apiModule from 'app/modules/api';
 
 export * from './debate-tools';
 export * from './db';
@@ -47,10 +51,10 @@ ipcSocket.on('message', (queueName: string, reply: (data: any) => void) => {
   reply(ipcCallbacks[queueName]());
 });
 
-export class ActionQueue<T> {
+export class ActionQueue<T, K extends string> {
   public queue = new Queue<T>();
   constructor(
-    public name: string,
+    public name: K,
     public action: (data: T) => Promise<unknown>, // Action to preform
     concurency: number, // Number of actions to preform at once
     emitter?: TypedEvent<T>, // Optional emitter to capture events from
@@ -85,4 +89,13 @@ export class ActionQueue<T> {
   }
 }
 
-export type QueueDataType<T> = T extends ActionQueue<infer U> ? U : never;
+export type QueueType =
+  | typeof parserModule['queue']
+  | typeof deduplicationModule['queue']
+  | typeof caselistModule['openevQueue' | 'caselistQueue' | 'schoolQueue' | 'teamQueue'];
+export type QueueDataType<Q> = Q extends ActionQueue<infer U, any> ? U : never;
+export type ExtractQueueName<Q> = Q extends ActionQueue<any, infer U> ? U : never;
+export type QueueDataTypes = {
+  [Q in QueueType as ExtractQueueName<Q>]: QueueDataType<Q>;
+};
+export type QueueName = keyof QueueDataTypes;

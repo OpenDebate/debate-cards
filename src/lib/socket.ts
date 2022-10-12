@@ -1,13 +1,7 @@
-export const ipcRequest = <T>({
-  socket,
-  message,
-  timeout,
-}: {
-  socket: any;
-  message: any[];
-  timeout?: number;
-}): Promise<T> =>
-  new Promise((resolve, reject) => {
+import type { QueueDataTypes, QueueName } from '.';
+
+const ipcRequest = ({ socket, message, timeout }: { socket: any; message: any[]; timeout?: number }) =>
+  new Promise<any>((resolve, reject) => {
     let resolved = false;
     socket.send(...message, (data) => {
       resolved = true;
@@ -25,3 +19,10 @@ export const ipcRequest = <T>({
       }, timeout);
     }
   });
+
+export const queueRequest = <Q extends QueueName>(
+  socket: any,
+  { queueName }: { queueName: Q },
+): Promise<QueueDataTypes[Q][]> => {
+  return ipcRequest({ socket, message: [queueName], timeout: 5000 });
+};

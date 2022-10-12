@@ -54,3 +54,7 @@ async function main() {
   });
 }
 main();
+export default {
+  name: 'api',
+  main,
+};
