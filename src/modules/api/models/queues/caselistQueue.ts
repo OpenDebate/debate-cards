@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Field, ObjectType } from 'type-graphql';
-import caselistModule from 'app/modules/caselist';
+import type caselistModule from 'app/modules/caselist';
 import { QueueDataType } from 'app/lib';
 import { CaselistBase, SchoolBase, TeamBase } from '../caselist';
 

@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Field, ObjectType } from 'type-graphql';
-import parser from 'app/modules/parser';
+import type parser from 'app/modules/parser';
 import { QueueDataType } from 'app/lib';
 
 @ObjectType()

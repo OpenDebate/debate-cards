@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Field, ObjectType } from 'type-graphql';
-import deduplication from 'app/modules/deduplicator';
+import type deduplication from 'app/modules/deduplicator';
 import { QueueDataType } from 'app/lib';
 
 @ObjectType()
