@@ -43,9 +43,12 @@ export class Lock {
   }
 }
 
+export interface QueueRequestData<Q extends QueueName> {
+  queueName: Q;
+}
 const ipcCallbacks: Record<string, () => any> = {};
 const ipcSocket = axon.socket('rep');
-ipcSocket.on('message', (queueName: string, reply: (data: any) => void) => {
+ipcSocket.on('message', ({ queueName }: QueueRequestData<QueueName>, reply: (data: any) => void) => {
   if (!(queueName in ipcCallbacks)) return reply({ err: `No queue with name ${queueName} exists` });
 
   reply(ipcCallbacks[queueName]());

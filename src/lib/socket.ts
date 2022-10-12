@@ -1,9 +1,9 @@
-import type { QueueDataTypes, QueueName } from '.';
+import type { QueueDataTypes, QueueName, QueueRequestData } from '.';
 
-const ipcRequest = ({ socket, message, timeout }: { socket: any; message: any[]; timeout?: number }) =>
+const ipcRequest = (socket: any, message: any, timeout?: number) =>
   new Promise<any>((resolve, reject) => {
     let resolved = false;
-    socket.send(...message, (data) => {
+    socket.send(message, (data) => {
       resolved = true;
       if (data.err) reject(new Error(data.err));
       else resolve(data);
@@ -22,7 +22,7 @@ const ipcRequest = ({ socket, message, timeout }: { socket: any; message: any[];
 
 export const queueRequest = <Q extends QueueName>(
   socket: any,
-  { queueName }: { queueName: Q },
+  message: QueueRequestData<Q>,
 ): Promise<QueueDataTypes[Q][]> => {
-  return ipcRequest({ socket, message: [queueName], timeout: 5000 });
+  return ipcRequest(socket, message, 5000);
 };
