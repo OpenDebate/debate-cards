@@ -42,16 +42,33 @@ export class Lock {
     this.promise = new Promise((resolve) => (this.unlock = resolve));
   }
 }
+export type QueueType =
+  | typeof parserModule['queue']
+  | typeof deduplicationModule['queue']
+  | typeof caselistModule['openevQueue' | 'caselistQueue' | 'schoolQueue' | 'teamQueue'];
+export type QueueDataType<Q> = Q extends ActionQueue<infer U, any> ? U : never;
+export type ExtractQueueName<Q> = Q extends ActionQueue<any, infer U> ? U : never;
+export type QueueDataTypes = {
+  [Q in QueueType as ExtractQueueName<Q>]: QueueDataType<Q>;
+};
+export type QueueName = keyof QueueDataTypes;
 
-export interface QueueRequestData<Q extends QueueName> {
+export type ActionResponses<N extends QueueName> = {
+  tasks: QueueDataTypes[N][];
+  length: number;
+};
+export type QueueRequestData<Q extends QueueName, A extends keyof ActionResponses<Q> = QueueAction> = {
   queueName: Q;
-}
-const ipcCallbacks: Record<string, () => any> = {};
+  action: A;
+};
+export type QueueAction = keyof ActionResponses<QueueName>;
+
 const ipcSocket = axon.socket('rep');
-ipcSocket.on('message', ({ queueName }: QueueRequestData<QueueName>, reply: (data: any) => void) => {
+const ipcCallbacks: Record<string, (action: QueueAction) => any> = {};
+ipcSocket.on('message', ({ queueName, action }: QueueRequestData<QueueName>, reply: (data: any) => void) => {
   if (!(queueName in ipcCallbacks)) return reply({ err: `No queue with name ${queueName} exists` });
 
-  reply(ipcCallbacks[queueName]());
+  reply(ipcCallbacks[queueName](action));
 });
 
 export class ActionQueue<T, K extends string> {
@@ -68,14 +85,19 @@ export class ActionQueue<T, K extends string> {
 
     // Only connect for process running an actionqueue
     ipcSocket.connect(IPC_PORT, 'api');
-    ipcCallbacks[this.name] = () => {
-      const queueArray: T[] = [];
-      // Braces cause cant return number
-      this.queue.forEach((el) => {
-        queueArray.push(el);
-        return;
-      });
-      return queueArray;
+    ipcCallbacks[this.name] = (action) => {
+      switch (action) {
+        case 'tasks':
+          const queueArray: T[] = [];
+          // Braces cause cant return number
+          this.queue.forEach((el) => {
+            queueArray.push(el);
+            return;
+          });
+          return queueArray;
+        case 'length':
+          return this.queue.size();
+      }
     };
   }
 
@@ -91,14 +113,3 @@ export class ActionQueue<T, K extends string> {
     (await this.loader()).forEach((data) => this.queue.enqueue(data));
   }
 }
-
-export type QueueType =
-  | typeof parserModule['queue']
-  | typeof deduplicationModule['queue']
-  | typeof caselistModule['openevQueue' | 'caselistQueue' | 'schoolQueue' | 'teamQueue'];
-export type QueueDataType<Q> = Q extends ActionQueue<infer U, any> ? U : never;
-export type ExtractQueueName<Q> = Q extends ActionQueue<any, infer U> ? U : never;
-export type QueueDataTypes = {
-  [Q in QueueType as ExtractQueueName<Q>]: QueueDataType<Q>;
-};
-export type QueueName = keyof QueueDataTypes;

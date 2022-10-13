@@ -1,12 +1,12 @@
-import type { QueueDataTypes, QueueName, QueueRequestData } from '.';
+import type { ActionResponses, QueueName, QueueRequestData } from '.';
 
 const ipcRequest = (socket: any, message: any, timeout?: number) =>
   new Promise<any>((resolve, reject) => {
     let resolved = false;
-    socket.send(message, (data) => {
+    socket.send(message, (reply) => {
       resolved = true;
-      if (data.err) reject(new Error(data.err));
-      else resolve(data);
+      if (reply?.err) reject(new Error(reply.err));
+      else resolve(reply);
     });
     // socket.send adds id field to callback
     const resolveCallback = resolve as typeof resolve & { id: string };
@@ -20,9 +20,10 @@ const ipcRequest = (socket: any, message: any, timeout?: number) =>
     }
   });
 
-export const queueRequest = <Q extends QueueName>(
+export const queueRequest = <N extends QueueName, A extends keyof ActionResponses<N>>(
   socket: any,
-  message: QueueRequestData<Q>,
-): Promise<QueueDataTypes[Q][]> => {
-  return ipcRequest(socket, message, 5000);
+  message: QueueRequestData<N, A>,
+  timeout: number = 5000,
+): Promise<ActionResponses<N>[A]> => {
+  return ipcRequest(socket, message, timeout);
 };

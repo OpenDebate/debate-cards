@@ -16,6 +16,9 @@ const createQueueResolver = <taskType extends ClassType<QueueDataTypes[N]>, N ex
     @Field((type) => [taskType])
     tasks: QueueDataTypes[N][];
 
+    @Field((type) => String)
+    name: N;
+
     @Field()
     length: number;
   }
@@ -24,13 +27,20 @@ const createQueueResolver = <taskType extends ClassType<QueueDataTypes[N]>, N ex
   abstract class QueueResolver {
     @Query((returns) => QueueType)
     @Authorized('ADMIN')
-    async [queueName + 'Queue'](): Promise<Partial<InstanceType<typeof QueueType>>> {
-      const tasks = await queueRequest(requestSocket, { queueName });
-      return { tasks };
+    async [queueName + 'Queue']() {
+      return { name: queueName };
     }
+
     @FieldResolver()
-    async length(@Root() parent: InstanceType<typeof QueueType>): Promise<number> {
-      return parent.tasks.length;
+    async tasks(): Promise<QueueDataTypes[N][]> {
+      return queueRequest(requestSocket, { queueName, action: 'tasks' });
+    }
+
+    @FieldResolver()
+    async length(): Promise<number> {
+      const length = await queueRequest(requestSocket, { queueName, action: 'length' }, 1000);
+      // IPC library turns 0 into null :)
+      return length ?? 0;
     }
   }
   return QueueResolver;
