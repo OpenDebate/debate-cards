@@ -2,7 +2,7 @@ import { IPC_PORT } from 'app/constants';
 import type { QueueDataTypes, QueueName } from 'app/lib';
 import { queueRequest } from 'app/lib/socket';
 import axon from 'pm2-axon';
-import { Authorized, ClassType, Field, FieldResolver, ObjectType, Query, Resolver, Root } from 'type-graphql';
+import { Arg, Authorized, ClassType, Field, FieldResolver, ObjectType, Query, Resolver, Root } from 'type-graphql';
 import { CaselistTask, DedupTask, OpenevTask, ParseTask, SchoolTask, TeamTask } from '../models';
 const requestSocket = axon.socket('req');
 requestSocket.bind(IPC_PORT);
@@ -32,8 +32,11 @@ const createQueueResolver = <taskType extends ClassType<QueueDataTypes[N]>, N ex
     }
 
     @FieldResolver()
-    async tasks(): Promise<QueueDataTypes[N][]> {
-      return queueRequest(requestSocket, { queueName, action: 'tasks' });
+    async tasks(
+      @Arg('take', { nullable: true }) take: number,
+      @Arg('skip', { defaultValue: 0 }) skip: number,
+    ): Promise<QueueDataTypes[N][]> {
+      return queueRequest(requestSocket, { queueName, action: 'tasks', args: { skip, take } });
     }
 
     @FieldResolver()

@@ -53,22 +53,30 @@ export type QueueDataTypes = {
 };
 export type QueueName = keyof QueueDataTypes;
 
-export type ActionResponses<N extends QueueName> = {
+export type IPCActions<N extends QueueName> = {
+  tasks: { res: QueueDataTypes[N][]; args: { skip: number; take: number } };
+  length: { res: number; args: undefined };
+};
+export type ActionArgs<N extends QueueName> = {
   tasks: QueueDataTypes[N][];
   length: number;
 };
-export type QueueRequestData<Q extends QueueName, A extends keyof ActionResponses<Q> = QueueAction> = {
+
+export type QueueRequestData<Q extends QueueName, A extends keyof IPCActions<Q> = QueueAction> = {
   queueName: Q;
   action: A;
-};
-export type QueueAction = keyof ActionResponses<QueueName>;
+  // Dont include property if no args
+} & (IPCActions<Q>[A]['args'] extends undefined ? {} : { args: IPCActions<Q>[A]['args'] });
+
+export type QueueAction = keyof IPCActions<QueueName>;
 
 const ipcSocket = axon.socket('rep');
-const ipcCallbacks: Record<string, (action: QueueAction) => any> = {};
-ipcSocket.on('message', ({ queueName, action }: QueueRequestData<QueueName>, reply: (data: any) => void) => {
+const ipcCallbacks: Record<string, <A extends QueueAction>(action: A, args: IPCActions<QueueName>[A]['args']) => any> =
+  {};
+ipcSocket.on('message', ({ queueName, action, args }: QueueRequestData<QueueName>, reply: (data: any) => void) => {
   if (!(queueName in ipcCallbacks)) return reply({ err: `No queue with name ${queueName} exists` });
 
-  reply(ipcCallbacks[queueName](action));
+  reply(ipcCallbacks[queueName](action, args));
 });
 
 export class ActionQueue<T, K extends string> {
@@ -85,16 +93,17 @@ export class ActionQueue<T, K extends string> {
 
     // Only connect for process running an actionqueue
     ipcSocket.connect(IPC_PORT, 'api');
-    ipcCallbacks[this.name] = (action) => {
+    ipcCallbacks[this.name] = (action, args) => {
       switch (action) {
         case 'tasks':
+          const { skip, take } = args;
           const queueArray: T[] = [];
           // Braces cause cant return number
           this.queue.forEach((el) => {
             queueArray.push(el);
             return;
           });
-          return queueArray;
+          return take ? queueArray.slice(skip, skip + take) : queueArray.slice(skip);
         case 'length':
           return this.queue.size();
       }

@@ -1,4 +1,4 @@
-import type { ActionResponses, QueueName, QueueRequestData } from '.';
+import type { IPCActions, QueueName, QueueRequestData } from '.';
 
 const ipcRequest = (socket: any, message: any, timeout?: number) =>
   new Promise<any>((resolve, reject) => {
@@ -20,10 +20,10 @@ const ipcRequest = (socket: any, message: any, timeout?: number) =>
     }
   });
 
-export const queueRequest = <N extends QueueName, A extends keyof ActionResponses<N>>(
+export const queueRequest = <N extends QueueName, A extends keyof IPCActions<N>>(
   socket: any,
   message: QueueRequestData<N, A>,
   timeout: number = 5000,
-): Promise<ActionResponses<N>[A]> => {
+): Promise<IPCActions<N>[A]['res']> => {
   return ipcRequest(socket, message, timeout);
 };
