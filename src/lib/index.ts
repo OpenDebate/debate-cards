@@ -46,57 +46,54 @@ export type QueueType =
   | typeof parserModule['queue']
   | typeof deduplicationModule['queue']
   | typeof caselistModule['openevQueue' | 'caselistQueue' | 'schoolQueue' | 'teamQueue'];
-export type QueueDataType<Q> = Q extends ActionQueue<infer U, any> ? U : never;
-export type ExtractQueueName<Q> = Q extends ActionQueue<any, infer U> ? U : never;
-export type QueueDataTypes = {
-  [Q in QueueType as ExtractQueueName<Q>]: QueueDataType<Q>;
-};
+export type QueueDataType<Q> = Q extends ActionQueue<infer U, any, any> ? U : never;
+export type ExtractQueueName<Q> = Q extends ActionQueue<any, infer U, any> ? U : never;
+export type ExtractLoadArgs<Q> = Q extends ActionQueue<any, any, infer U> ? U : never;
+export type QueueDataTypes = { [Q in QueueType as ExtractQueueName<Q>]: QueueDataType<Q> };
+export type QueueLoadArgs = { [Q in QueueType as ExtractQueueName<Q>]: ExtractLoadArgs<Q> };
+
 export type QueueName = keyof QueueDataTypes;
 
-export type IPCActions<N extends QueueName> = {
+export type IPCActions<N extends QueueName = QueueName> = {
   tasks: { res: QueueDataTypes[N][]; args: { skip: number; take: number } };
   length: { res: number; args: undefined };
-};
-export type ActionArgs<N extends QueueName> = {
-  tasks: QueueDataTypes[N][];
-  length: number;
+  load: { res: number; args: QueueLoadArgs[N] };
 };
 
-export type QueueRequestData<Q extends QueueName, A extends keyof IPCActions<Q> = QueueAction> = {
+export type QueueRequestData<Q extends QueueName = QueueName, A extends keyof IPCActions<Q> = QueueAction> = {
   queueName: Q;
   action: A;
   // Dont include property if no args
 } & (IPCActions<Q>[A]['args'] extends undefined ? {} : { args: IPCActions<Q>[A]['args'] });
 
-export type QueueAction = keyof IPCActions<QueueName>;
+export type QueueAction = keyof IPCActions;
 
 const ipcSocket = axon.socket('rep');
-const ipcCallbacks: Record<string, <A extends QueueAction>(action: A, args: IPCActions<QueueName>[A]['args']) => any> =
-  {};
-ipcSocket.on('message', ({ queueName, action, args }: QueueRequestData<QueueName>, reply: (data: any) => void) => {
-  if (!(queueName in ipcCallbacks)) return reply({ err: `No queue with name ${queueName} exists` });
+const ipcCallbacks: Record<string, (action: QueueAction, args: IPCActions[QueueAction]['args']) => Promise<any>> = {};
+ipcSocket.on('message', async ({ queueName, action, args }: QueueRequestData, reply: (data: any) => void) => {
+  if (!(queueName in ipcCallbacks)) return reply({ err: `No queue with name ${queueName} is running` });
 
-  reply(ipcCallbacks[queueName](action, args));
+  reply(await ipcCallbacks[queueName](action, args));
 });
 
-export class ActionQueue<T, K extends string> {
+export class ActionQueue<T, N extends string, A extends Record<string, any>> {
   public queue = new Queue<T>();
   constructor(
-    public name: K,
+    public name: N,
     public action: (data: T) => Promise<unknown>, // Action to preform
     concurency: number, // Number of actions to preform at once
     emitter?: TypedEvent<T>, // Optional emitter to capture events from
-    private loader?: () => Promise<T[]>, // Optional function to load data into queue, to be called later.
+    private loader?: (args: A) => Promise<T[]>, // Optional function to load data into queue, to be called later.
   ) {
     if (emitter) emitter.on((data) => this.queue.enqueue(data));
     for (let i = 0; i < concurency; i++) this.drain();
 
     // Only connect for process running an actionqueue
     ipcSocket.connect(IPC_PORT, 'api');
-    ipcCallbacks[this.name] = (action, args) => {
+    ipcCallbacks[this.name] = async (action, args) => {
       switch (action) {
         case 'tasks':
-          const { skip, take } = args;
+          const { skip, take } = args as IPCActions[typeof action]['args']; // Automatic narrowing wont work even with generics
           const queueArray: T[] = [];
           // Braces cause cant return number
           this.queue.forEach((el) => {
@@ -106,6 +103,8 @@ export class ActionQueue<T, K extends string> {
           return take ? queueArray.slice(skip, skip + take) : queueArray.slice(skip);
         case 'length':
           return this.queue.size();
+        case 'load':
+          return this.load(args as A);
       }
     };
   }
@@ -117,8 +116,10 @@ export class ActionQueue<T, K extends string> {
       .finally(() => this.drain());
   }
 
-  async load(): Promise<void> {
+  async load(args: A): Promise<number> {
     if (!this.loader) return;
-    (await this.loader()).forEach((data) => this.queue.enqueue(data));
+    const loaded = await this.loader(args);
+    loaded.forEach((data) => this.queue.enqueue(data));
+    return loaded.length;
   }
 }
