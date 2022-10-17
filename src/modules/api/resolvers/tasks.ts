@@ -1,5 +1,5 @@
 import { IPC_PORT } from 'app/constants';
-import type { QueueDataTypes, QueueName } from 'app/lib';
+import type { QueueDataTypes, QueueLoadArgs, QueueName } from 'app/lib';
 import { queueRequest } from 'app/lib/socket';
 import axon from 'pm2-axon';
 import { Arg, Args, Authorized, Field, FieldResolver, Mutation, ObjectType, Query, Resolver } from 'type-graphql';
@@ -54,7 +54,7 @@ const createQueueResolver = <N extends QueueName>(queueName: N) => {
     @Mutation(() => LoadResults)
     @Authorized('ADMIN')
     async [`load${capitalizedQueueName}Queue`](
-      @Args(() => loadInput) args: typeof loadInput,
+      @Args(() => loadInput) args: QueueLoadArgs[N],
     ): Promise<{ size: number }> {
       return { size: (await queueRequest(requestSocket, { queueName, action: 'load', args }, 10 * 60 * 1000)) ?? 0 };
     }
