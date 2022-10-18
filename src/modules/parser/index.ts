@@ -5,9 +5,19 @@ import { db, ActionQueue } from 'app/lib';
 
 export default {
   name: 'parser',
-  queue: new ActionQueue('parse', parseFile, CONCURRENT_PARSERS, onAddFile, async ({ gids }: { gids?: string[] }) =>
-    gids
-      ? gids.map((gid) => ({ gid }))
-      : db.file.findMany({ where: { status: { equals: 'PENDING' } }, select: { gid: true } }),
+  queue: new ActionQueue(
+    'parse',
+    parseFile,
+    CONCURRENT_PARSERS,
+    onAddFile,
+    async ({ gids, loadPending }: { gids?: string[]; loadPending: boolean }) => {
+      let tasks: { gid: string }[] = [];
+      if (gids) tasks = tasks.concat(gids.map((gid) => ({ gid })));
+      if (loadPending)
+        tasks = tasks.concat(
+          await db.file.findMany({ where: { status: { equals: 'PENDING' } }, select: { gid: true } }),
+        );
+      return tasks;
+    },
   ),
 };
