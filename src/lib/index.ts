@@ -73,7 +73,11 @@ const ipcCallbacks: Record<string, (action: QueueAction, args: IPCActions[QueueA
 ipcSocket.on('message', async ({ queueName, action, args }: QueueRequestData, reply: (data: any) => void) => {
   if (!(queueName in ipcCallbacks)) return reply({ err: `No queue with name ${queueName} is running` });
 
-  reply(await ipcCallbacks[queueName](action, args));
+  try {
+    reply(await ipcCallbacks[queueName](action, args));
+  } catch (err) {
+    reply({ err: err });
+  }
 });
 
 export class ActionQueue<T, N extends string, A extends Record<string, any>> {

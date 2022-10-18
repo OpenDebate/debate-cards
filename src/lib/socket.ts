@@ -5,7 +5,7 @@ const ipcRequest = (socket: any, message: any, timeout?: number) =>
     let resolved = false;
     socket.send(message, (reply) => {
       resolved = true;
-      if (reply?.err) reject(new Error(reply.err));
+      if (reply?.err) reject(reply.err);
       else resolve(reply);
     });
     // socket.send adds id field to callback
