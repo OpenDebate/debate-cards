@@ -13,7 +13,7 @@ export default {
   openevQueue: new ActionQueue('openev', addOpenev, 2, null, async ({ years }: { years?: number[] }) => {
     const files: ModelFile[] = [];
     const defaultYears = [];
-    for (let year = 2013; year <= 2022; year++) defaultYears.push(year);
+    for (let year = 2022; year >= 2013; year--) defaultYears.push(year);
 
     for (const year of years ?? defaultYears) {
       files.push(...(await caselistApi.getFiles(year)).body);
@@ -30,7 +30,7 @@ export default {
       if (archived || years || names) tasks = tasks.concat((await caselistApi.getCaselists(true)).body);
       if (active || years || names) tasks = tasks.concat((await caselistApi.getCaselists(false)).body);
       if (years || names) tasks = tasks.filter((c) => years?.includes(c.year) || names?.includes(c.name));
-      return tasks;
+      return tasks.sort((a, b) => b.year - a.year); // Do more recent years first
     },
   ),
   schoolQueue: new ActionQueue(
