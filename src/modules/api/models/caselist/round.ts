@@ -17,14 +17,14 @@ export class RoundBase implements Partial<RoundModel> {
   @Field()
   round: string;
 
-  @Field()
-  opponent: string;
+  @Field({ nullable: true })
+  opponent?: string;
 
-  @Field()
-  judge: string;
+  @Field({ nullable: true })
+  judge?: string;
 
-  @Field()
-  report: string;
+  @Field({ nullable: true })
+  report?: string;
 
   @Field({ nullable: true })
   opensourcePath?: string;
