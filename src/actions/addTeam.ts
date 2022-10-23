@@ -1,11 +1,43 @@
-import { connectOrCreateTag, db } from 'app/lib';
+import { db, TagInput, TypedEvent } from 'app/lib';
 import { caselistApi, caselistToPrisma } from 'app/lib/caselist';
-import addFile from './addFile';
-import downloadFile from './downloadFile';
 import { TeamLoadedEvent } from './addSchool';
 import { omit } from 'lodash';
-import path from 'path';
 import { EVENT_NAMES } from 'app/constants/caselistNames';
+import addOpensource from './addOpensource';
+
+interface OpenSourceTagInput {
+  caselist: {
+    event: string;
+    name: string;
+    displayName: string;
+    year: number;
+    level: string;
+  };
+  school: {
+    name: string;
+    displayName: string;
+  };
+  team: {
+    name: string;
+    displayName: string;
+  };
+  round: {
+    side: string;
+  };
+}
+export const openSourceTags = ({ caselist, school, team, round }: OpenSourceTagInput): TagInput[] => [
+  { name: 'wiki', label: 'Wiki' },
+  { name: caselist.name, label: caselist.displayName },
+  { name: caselist.year.toString(), label: caselist.year.toString() },
+  { name: caselist.level, label: caselist.level === 'college' ? 'College' : 'High School' },
+  { name: caselist.event, label: EVENT_NAMES[caselist.event] as string },
+  { name: school.name, label: school.displayName },
+  {
+    name: `${caselist.name}/${school.name}/${team.name}`,
+    label: `${caselist.displayName}/${school.displayName}/${team.displayName}`,
+  },
+  { name: `wiki${round.side}`, label: `Wiki ${round.side === 'A' ? 'Affirmative' : 'Negative'}` },
+];
 
 export default async ({ caselist, school, team }: TeamLoadedEvent): Promise<number> => {
   const saved = await db.team.upsert(caselistToPrisma(team, 'teamId', 'schoolId'));
@@ -16,25 +48,11 @@ export default async ({ caselist, school, team }: TeamLoadedEvent): Promise<numb
       const saveData = { ...omit(round, 'opensource'), opensourcePath: round.opensource };
       const saved = await db.round.upsert(caselistToPrisma(saveData, 'roundId', 'teamId'));
       if (round.opensource) {
-        const tags = [
-          connectOrCreateTag('wiki', 'Wiki'),
-          connectOrCreateTag(caselist.name, caselist.displayName),
-          connectOrCreateTag(caselist.year.toString(), caselist.year.toString()),
-          connectOrCreateTag(caselist.level, caselist.level === 'college' ? 'College' : 'High School'),
-          connectOrCreateTag(caselist.event, EVENT_NAMES[caselist.event]),
-          connectOrCreateTag(school.name, school.displayName),
-          connectOrCreateTag(
-            `${caselist.name}/${school.name}/${team.name}`,
-            `${caselist.displayName}/${school.displayName}/${team.displayName}`,
-          ),
-          connectOrCreateTag(`wiki${round.side}`, `Wiki ${round.side === 'A' ? 'Affirmative' : 'Negative'}`),
-        ];
-        await downloadFile(round.opensource);
-        await addFile({
-          path: `./documents/${round.opensource}`,
-          name: path.parse(round.opensource).name,
-          round: { connect: { id: saved.id } },
-          tags: { connectOrCreate: tags },
+        // Dont wait for file download
+        addOpensource({
+          id: saved.id,
+          filePath: round.opensource,
+          tags: openSourceTags({ caselist, school, team, round }),
         });
       }
     }),
