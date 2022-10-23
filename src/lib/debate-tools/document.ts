@@ -1,18 +1,34 @@
-import { markupToTokens, TextBlock } from './';
-import { tokensToMarkup } from './tokens';
+import { createStyleParser, createTokenizer, StyleData, TextBlock } from './';
+import { simplifyTokens, tokensToMarkup } from './tokens';
 import { ParseOne } from 'unzipper';
-import fs from 'fs';
+import { createReadStream } from 'fs';
+import { pipeline } from 'stream/promises';
+
+interface TokensOption {
+  simplified: boolean;
+}
 
 /* 
   1 - open document.xml and styles.xml by unzipping .docx file
   2 - tokenize document.xml and pull info on named styles from styles.xml
 */
-export const documentToTokens = (filepath: string): Promise<TextBlock[]> =>
-  new Promise((resolve, reject) => {
-    const document = loadXml(filepath, /document\.xml$/).on('error', reject);
-    const styles = loadXml(filepath, /styles\.xml$/).on('error', reject);
-    markupToTokens(document, styles, { simplified: true }).then(resolve).catch(reject);
-  });
+export const documentToTokens = async (filepath: string, options?: TokensOption): Promise<TextBlock[]> => {
+  const styleData = await new Promise<StyleData>((resolve, reject) =>
+    pipeline([createReadStream(filepath), ParseOne(/styles\.xml$/), createStyleParser(resolve, reject)]).catch(reject),
+  );
+  const blocks = await new Promise<TextBlock[]>((resolve, reject) =>
+    pipeline([
+      createReadStream(filepath),
+      ParseOne(/document\.xml$/),
+      createTokenizer(styleData, resolve, reject),
+    ]).catch(reject),
+  );
+  if (options?.simplified) {
+    const simplifiedBlocks = blocks.map(simplifyTokens);
+    return simplifiedBlocks;
+  }
+  return blocks;
+};
 
 /* 
   1 - open document.xml
@@ -24,6 +40,3 @@ export const documentToMarkup = async (filepath: string): Promise<string> => {
   const markup = tokensToMarkup(tokens);
   return markup;
 };
-
-// Load xml by unzipping docx file, file is regex for file name to look for
-const loadXml = (path: string, file: RegExp) => fs.createReadStream(path).pipe(ParseOne(file));
