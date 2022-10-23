@@ -18,4 +18,5 @@ export const QueueModels: QueueModels = {
   caselist: { taskType: Caselist.CaselistTask, loadInput: QueueInputs.CaselistLoadInput },
   school: { taskType: Caselist.SchoolTask, loadInput: QueueInputs.SchoolLoadInput },
   team: { taskType: Caselist.TeamTask, loadInput: QueueInputs.TeamLoadInput },
+  opensource: { taskType: Caselist.OpensourceTask, loadInput: QueueInputs.OpensourceLoadInput },
 };

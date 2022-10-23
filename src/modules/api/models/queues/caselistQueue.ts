@@ -63,3 +63,24 @@ export class TeamTask extends SchoolTask implements QueueDataType<typeof caselis
   @Field((type) => TaskTeamInfo)
   team: TaskTeamInfo;
 }
+
+@ObjectType()
+class TagArgs {
+  @Field()
+  name: string;
+
+  @Field()
+  label: string;
+}
+
+@ObjectType()
+export class OpensourceTask implements QueueDataType<typeof caselistModule['opensourceQueue']> {
+  @Field()
+  id: number;
+
+  @Field()
+  filePath: string;
+
+  @Field((type) => [TagArgs])
+  tags: TagArgs[];
+}

@@ -3,7 +3,9 @@ import { caselistApi, caselistToPrisma } from 'app/lib/caselist';
 import { TeamLoadedEvent } from './addSchool';
 import { omit } from 'lodash';
 import { EVENT_NAMES } from 'app/constants/caselistNames';
-import addOpensource from './addOpensource';
+import { OpensourceLoadedEvent } from './addOpensource';
+
+export const onOpensourceLoaded = new TypedEvent<OpensourceLoadedEvent>();
 
 interface OpenSourceTagInput {
   caselist: {
@@ -49,7 +51,7 @@ export default async ({ caselist, school, team }: TeamLoadedEvent): Promise<numb
       const saved = await db.round.upsert(caselistToPrisma(saveData, 'roundId', 'teamId'));
       if (round.opensource) {
         // Dont wait for file download
-        addOpensource({
+        onOpensourceLoaded.emit({
           id: saved.id,
           filePath: round.opensource,
           tags: openSourceTags({ caselist, school, team, round }),

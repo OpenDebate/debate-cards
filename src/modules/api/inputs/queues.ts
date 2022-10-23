@@ -60,3 +60,8 @@ export class TeamLoadInput implements ExtractLoadArgs<typeof caselistModule['tea
   @Field()
   team: string;
 }
+@ArgsType()
+export class OpensourceLoadInput implements ExtractLoadArgs<typeof caselistModule['opensourceQueue']> {
+  @Field()
+  loadPending: boolean;
+}

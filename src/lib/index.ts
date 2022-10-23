@@ -45,7 +45,7 @@ export class Lock {
 export type QueueType =
   | typeof parserModule['queue']
   | typeof deduplicationModule['queue']
-  | typeof caselistModule['openevQueue' | 'caselistQueue' | 'schoolQueue' | 'teamQueue'];
+  | typeof caselistModule['openevQueue' | 'caselistQueue' | 'schoolQueue' | 'teamQueue' | 'opensourceQueue'];
 export type QueueDataType<Q> = Q extends ActionQueue<infer U, any, any> ? U : never;
 export type ExtractQueueName<Q> = Q extends ActionQueue<any, infer U, any> ? U : never;
 export type ExtractLoadArgs<Q> = Q extends ActionQueue<any, any, infer U> ? U : never;
@@ -58,6 +58,7 @@ export type IPCActions<N extends QueueName = QueueName> = {
   tasks: { res: QueueDataTypes[N][]; args: { skip: number; take: number } };
   length: { res: number; args: undefined };
   load: { res: number; args: QueueLoadArgs[N] };
+  add: { res: number; args: QueueDataTypes[N][] };
 };
 
 export type QueueRequestData<Q extends QueueName = QueueName, A extends keyof IPCActions<Q> = QueueAction> = {
@@ -109,6 +110,10 @@ export class ActionQueue<T, N extends string, A extends Record<string, any>> {
           return this.queue.size();
         case 'load':
           return this.load(args as A);
+        case 'add':
+          const tasks = args as T[];
+          for (const task of tasks) this.queue.enqueue(task);
+          return tasks;
       }
     };
   }

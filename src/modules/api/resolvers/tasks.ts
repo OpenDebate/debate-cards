@@ -84,6 +84,9 @@ class SchoolQueueResolver extends createQueueResolver('school') {}
 @Resolver()
 class TeamQueueResolver extends createQueueResolver('team') {}
 
+@Resolver()
+class OpensourceQueueResolver extends createQueueResolver('opensource') {}
+
 export const QueueResolvers = [
   ParseQueueResolver,
   DedupQueueResolver,
@@ -91,4 +94,5 @@ export const QueueResolvers = [
   CaselistQueueResolver,
   SchoolQueueResolver,
   TeamQueueResolver,
+  OpensourceQueueResolver,
 ];

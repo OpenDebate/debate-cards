@@ -1,9 +1,10 @@
 import addCaselist, { onSchoolLoaded } from 'app/actions/addCaselist';
 import addOpenev from 'app/actions/addOpenev';
+import addOpensource, { OpensourceLoadedEvent } from 'app/actions/addOpensource';
 import addSchool, { onTeamLoaded } from 'app/actions/addSchool';
-import addTeam from 'app/actions/addTeam';
+import addTeam, { onOpensourceLoaded, openSourceTags } from 'app/actions/addTeam';
 import { Caselist, ModelFile } from 'app/constants/caselist/api';
-import { ActionQueue } from 'app/lib';
+import { ActionQueue, db } from 'app/lib';
 import { caselistApi } from 'app/lib/caselist';
 
 type CaselistLoadOptions = { archived: boolean; active: boolean; years?: number[]; names?: string[] };
@@ -60,6 +61,51 @@ export default {
           team: (await caselistApi.getTeam(caselist, school, team)).body,
         },
       ];
+    },
+  ),
+  opensourceQueue: new ActionQueue(
+    'opensource',
+    addOpensource,
+    5,
+    onOpensourceLoaded,
+    async ({ loadPending }: { loadPending: boolean }) => {
+      let tasks: OpensourceLoadedEvent[] = [];
+      if (loadPending) {
+        const rounds = await db.round.findMany({
+          where: { AND: [{ opensourcePath: { not: null } }, { opensource: { is: null } }] },
+          select: {
+            id: true,
+            side: true,
+            opensourcePath: true,
+            team: {
+              select: {
+                name: true,
+                displayName: true,
+                school: {
+                  select: {
+                    name: true,
+                    displayName: true,
+                    caselist: { select: { name: true, displayName: true, year: true, level: true, event: true } },
+                  },
+                },
+              },
+            },
+          },
+        });
+        tasks = tasks.concat(
+          rounds.map((round) => {
+            const team = round.team;
+            const school = team.school;
+            const caselist = school.caselist;
+            return {
+              id: round.id,
+              filePath: round.opensourcePath,
+              tags: openSourceTags({ caselist, school, team, round }),
+            };
+          }),
+        );
+      }
+      return tasks;
     },
   ),
 };
