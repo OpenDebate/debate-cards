@@ -7,8 +7,8 @@
     "prestart": "npx prisma migrate deploy",
     "generate": "npx openapi-generator-cli generate",
     "start": "npm run tasks & node ./build/modules/api",
-    "start:tasks": "node ./build/tasks",
-    "start:api": "node ./build/modules/api",
+    "start:tasks": "node --inspect=0.0.0.0:9229 ./build/tasks",
+    "start:api": "node --inspect=0.0.0.0:9230 ./build/modules/api",
     "dev": "ts-node-dev --poll --respawn -r tsconfig-paths/register ./src/",
     "dev:api": "ts-node-dev --transpile-only --poll --respawn -r tsconfig-paths/register ./src/modules/api"
   },
