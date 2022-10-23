@@ -38,7 +38,7 @@ export const getMatching = async (matches: SentenceMatch[][], baseId: number): P
 };
 
 export const findParent = async (id: number, text: string): Promise<{ updates: string[]; parent: number }> => {
-  const updates = [id.toString()];
+  let updates = [id.toString()];
   const sentences = getSentences(text) ?? [];
 
   if (sentences.length) Info.set(id, 'length', sentences.length);
@@ -59,7 +59,7 @@ export const findParent = async (id: number, text: string): Promise<{ updates: s
       // If cards are being added to a given bucket, wait to merge that bucket
       for (const card of toMerge) await mergeLock[card]?.promise;
       const children = await Promise.all(toMerge.map(Children.get));
-      updates.push(...children.flat());
+      updates = updates.concat(children.flat());
     }
   } catch (e) {
     console.error(e);
