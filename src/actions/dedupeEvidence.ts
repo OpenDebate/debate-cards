@@ -5,6 +5,7 @@ const updateLock: Record<number, Lock> = {};
 
 export default async ({ gid }: { gid: string }): Promise<any> => {
   const { id, fulltext } = await db.evidence.findUnique({ where: { gid }, select: { id: true, fulltext: true } });
+
   const { updates, parent } = await findParent(id, fulltext);
 
   // Only wait if it actually exists, otherwise it wont get set in time

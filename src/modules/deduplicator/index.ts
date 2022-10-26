@@ -1,13 +1,13 @@
 import { CONCURRENT_DEDUPLICATION } from 'app/constants';
 import { onAddEvidence } from 'app/actions/addEvidence';
-import dedupeFile from 'app/actions/dedupeFile';
+import dedupeEvidence from 'app/actions/dedupeEvidence';
 import { ActionQueue, db } from 'app/lib';
 
 export default {
   name: 'deduplication',
   queue: new ActionQueue(
     'dedup',
-    dedupeFile,
+    dedupeEvidence,
     CONCURRENT_DEDUPLICATION,
     onAddEvidence,
     async ({ gids, loadPending }: { gids?: string[]; loadPending: boolean }) => {
