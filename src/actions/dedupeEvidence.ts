@@ -1,32 +1,19 @@
-import { db, Lock } from 'app/lib';
-import { Children } from 'app/lib/redis';
-import { findParent } from 'app/lib/debate-tools/duplicate';
-const updateLock: Record<number, Lock> = {};
+import { db } from 'app/lib';
+import { dedup, getSentences } from 'app/lib/debate-tools/duplicate';
 
+// Note: Redis updates and postgres updates are atomic, but does not garuntee that if redis was updated so was database
 export default async ({ gid }: { gid: string }): Promise<any> => {
   const { id, fulltext } = await db.evidence.findUnique({ where: { gid }, select: { id: true, fulltext: true } });
+  const sentences = getSentences(fulltext) ?? [];
 
-  const { updates, parent } = await findParent(id, fulltext);
+  const { rootId, evidenceIds } = await dedup(id, sentences);
 
-  // Only wait if it actually exists, otherwise it wont get set in time
-  if (updateLock[parent]) await updateLock[parent].promise;
-  const lock = (updateLock[parent] = new Lock());
-
-  Children.set(parent, updates);
-  /* 
-    Counts are currently slightly higher than they should be for large buckets, might be related to evidence being added to the bucket multiple times
-    Counts are also not properly reset when a bucket is emptied
-  */
-  const bucket = await db.evidenceBucket.upsert({
-    where: { rootId: parent },
-    create: { rootId: parent, count: 1 },
-    update: { count: { increment: updates.length } },
-  });
-  await db.evidence.updateMany({
-    where: { id: { in: updates.map(Number) } },
-    data: { bucketId: bucket.id },
-  });
-
-  lock.unlock();
-  if (updateLock[parent] === lock) delete updateLock[parent];
+  return db.$transaction([
+    db.evidenceBucket.deleteMany({ where: { rootId: { in: evidenceIds.filter((id) => id !== rootId) } } }),
+    db.evidenceBucket.upsert({
+      where: { rootId },
+      create: { rootId, count: evidenceIds.length, evidence: { connect: evidenceIds.map((id) => ({ id })) } },
+      update: { rootId, count: evidenceIds.length, evidence: { set: evidenceIds.map((id) => ({ id })) } },
+    }),
+  ]);
 };

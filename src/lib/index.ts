@@ -35,13 +35,7 @@ export function pipe(...fns: Function[]) {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   return (x: any) => fns.reduce(async (y, fn) => fn(await y), x);
 }
-export class Lock {
-  unlock: () => void;
-  promise: Promise<void>;
-  constructor() {
-    this.promise = new Promise((resolve) => (this.unlock = resolve));
-  }
-}
+
 export type QueueType =
   | typeof parserModule['queue']
   | typeof deduplicationModule['queue']

@@ -1,9 +1,8 @@
-import { Lock } from 'app/lib';
-import { SentenceMatch, Sentence, Info, Children } from 'app/lib/redis';
+import { SentenceMatch, Sentence, Info, Children, redis } from 'app/lib/redis';
 import { EDGE_TOLERANCE, INSIDE_TOLERANCE, SENTENCE_REGEX } from 'app/constants';
 import { groupBy, map, min, max, uniq } from 'lodash';
+import { WatchError } from 'redis';
 
-const mergeLock: Record<number, Lock> = {};
 type MatchInfo = { cardLen: number; indexes: number[] };
 type MatchPair = { cardId: number; a: MatchInfo; b: MatchInfo };
 
@@ -20,7 +19,7 @@ const checkMatch = (a: MatchInfo, b: MatchInfo) =>
 // Check in both orders
 const isMatch = (info: MatchPair) => checkMatch(info.a, info.b) || checkMatch(info.b, info.a);
 
-export const getMatching = async (matches: SentenceMatch[][], baseId: number): Promise<number[]> => {
+export const getMatching = async (matches: SentenceMatch[][], baseId: number, client = redis): Promise<number[]> => {
   // Keep index in both cards
   const matchIndexes = matches
     .flatMap((sentence, i) => sentence.map(({ cardId, index }) => ({ cardId, aIndex: i, bIndex: index })))
@@ -30,45 +29,60 @@ export const getMatching = async (matches: SentenceMatch[][], baseId: number): P
     map(groupBy(matchIndexes, 'cardId'), async (val, key) => ({
       cardId: +key,
       a: { indexes: map(val, 'aIndex'), cardLen: matches.length },
-      b: { indexes: map(val, 'bIndex'), cardLen: await Info.get(+key, 'length') },
+      b: { indexes: map(val, 'bIndex'), cardLen: await Info.get(+key, 'length', client) },
     })),
   );
 
   return map(matchInfo.filter(isMatch), 'cardId');
 };
 
-export const findParent = async (id: number, text: string): Promise<{ updates: string[]; parent: number }> => {
-  let updates = [id.toString()];
-  const sentences = getSentences(text) ?? [];
-
-  if (sentences.length) Info.set(id, 'length', sentences.length);
-  sentences.forEach((sentence, i) => Sentence.set(sentence, [{ cardId: id, index: i }]));
-
-  // Get matching cards
-  const existing = await Promise.all(sentences.map(Sentence.get));
-  const filteredMatches = await getMatching(existing, id);
-  const matching = await Promise.all(filteredMatches.map((card) => Info.get(card, 'parent')));
-
-  const parent = min(matching) ?? id;
-  const toMerge = matching.filter((card) => card && card !== parent);
-  const mLock = (mergeLock[parent] = new Lock());
-
+export const dedup = async (id: number, sentences: string[]): Promise<{ rootId: number; evidenceIds: number[] }> => {
+  let evidenceIds = [id];
+  let rootId = id;
+  if (!sentences.length) return { rootId, evidenceIds };
+  // Uses optimisitc locking through WATCH commands to prevent concurrency issues
+  // https://redis.io/docs/manual/transactions/#optimistic-locking-using-check-and-set
   try {
-    // In rare case multiple different parents were matched, merge cards and update parents
-    if (toMerge.length) {
-      // If cards are being added to a given bucket, wait to merge that bucket
-      for (const card of toMerge) await mergeLock[card]?.promise;
-      const children = await Promise.all(toMerge.map(Children.get));
-      updates = updates.concat(children.flat());
-    }
-  } catch (e) {
-    console.error(e);
-  }
+    await redis.executeIsolated(async (client) => {
+      /* 
+        Watch for change in sentences, prevents new card being added that this card should match and it being missed
+        Will have a decent amonunt of false positives due to bucketing of sentences
+        Probability a card completes without a retry is roughly
+        (1 - ((sentencesPerCard * concurrentDeduplication) / numBuckets))^sentencesPerCard
+        sentencesPerCard seems to be roughly 30
+        With 25 concurrent deduplications happening, and 2^20 buckets, probability is around 0.98
+      */
+      await client.watch(sentences.map(Sentence.redisKey));
+      // Get matching cards
+      const matches = await Promise.all(sentences.map((s) => Sentence.get(s, client)));
+      const filteredMatches = await getMatching(matches, id, client); // Lengths never change so no need to watch
+      if (filteredMatches.length) {
+        // Watch for change in parent of matching cards
+        await client.watch(filteredMatches.map((match) => Info.redisKey(match, 'parent')));
+        // Get parents of matches
+        const parents = uniq(await Promise.all(filteredMatches.map((card) => Info.get(card, 'parent', client))));
+        rootId = min(parents) ?? id;
 
-  // If lock on parent hasnt been overwritten, unlock it
-  if (mergeLock[parent] === mLock) {
-    mergeLock[parent]?.unlock();
-    delete mergeLock[parent];
+        /*
+         Prevents merging into a bucket that got merged into something else and had its children reset
+         Prevents merging child that just had evidence added to it and missing the additions
+        */
+        await client.watch(parents.map(Children.redisKey));
+        const children = await Promise.all(parents.map(async (parent) => Children.get(parent, client)));
+        evidenceIds = uniq(evidenceIds.concat(parents, children.flat()));
+      }
+
+      const transaction = client.multi();
+      if (sentences.length) Info.set(id, 'length', sentences.length, transaction);
+      sentences.forEach((sentence, i) => Sentence.set(sentence, [{ cardId: id, index: i }], transaction));
+      Children.set(rootId, evidenceIds, transaction);
+
+      return transaction.exec();
+    });
+  } catch (err) {
+    if (err instanceof WatchError)
+      return dedup(id, sentences); // If watch error retry, only happens a few percent of the time
+    else throw err;
   }
-  return { updates: uniq(updates), parent };
+  return { rootId, evidenceIds };
 };
