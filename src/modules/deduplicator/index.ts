@@ -10,10 +10,11 @@ export default {
     dedupeEvidence,
     CONCURRENT_DEDUPLICATION,
     onAddEvidence,
-    async ({ gids, loadPending }: { gids?: string[]; loadPending: boolean }) => {
+    async ({ gids, loadPending, take }: { gids?: string[]; loadPending: boolean; take?: number }) => {
       let tasks: { gid: string }[] = [];
       if (gids) tasks = tasks.concat(gids.map((gid) => ({ gid })));
-      if (loadPending) tasks = await db.evidence.findMany({ where: { bucketId: null }, select: { gid: true } });
+      if (loadPending)
+        tasks = tasks.concat(await db.evidence.findMany({ where: { bucketId: null }, select: { gid: true }, take }));
 
       return tasks;
     },

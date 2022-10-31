@@ -18,6 +18,9 @@ export class DedupLoadInput implements ExtractLoadArgs<typeof deduplication['que
   @Field()
   loadPending: boolean;
 
+  @Field({ nullable: true })
+  take: number;
+
   @Field((type) => [String], { nullable: true })
   gids?: string[];
 }
