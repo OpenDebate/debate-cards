@@ -53,6 +53,7 @@ export type IPCActions<N extends QueueName = QueueName> = {
   length: { res: number; args: undefined };
   load: { res: number; args: QueueLoadArgs[N] };
   add: { res: number; args: QueueDataTypes[N][] };
+  clear: { res: number; args: undefined };
 };
 
 export type QueueRequestData<Q extends QueueName = QueueName, A extends keyof IPCActions<Q> = QueueAction> = {
@@ -108,6 +109,10 @@ export class ActionQueue<T, N extends string, A extends Record<string, any>> {
           const tasks = args as T[];
           for (const task of tasks) this.queue.enqueue(task);
           return tasks;
+        case 'clear':
+          const size = this.queue.size();
+          this.queue.clear();
+          return size;
       }
     };
   }

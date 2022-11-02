@@ -62,6 +62,12 @@ const createQueueResolver = <N extends QueueName>(queueName: N) => {
         throw new Error(`Failed to load data: ${err.name === 'HttpError' ? err.body.message : err.message ?? err}`);
       }
     }
+
+    @Mutation(() => Number)
+    @Authorized('ADMIN')
+    async [`clear${capitalizedQueueName}Queue`](): Promise<number> {
+      return (await queueRequest(requestSocket, { queueName, action: 'clear' })) ?? 0;
+    }
   }
   return QueueResolver;
 };
