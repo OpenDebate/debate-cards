@@ -7,7 +7,7 @@ export const CONCURRENT_DEDUPLICATION = 20;
 // If a card has EDGE_TOLERANCE different sentences at start or end, will be treated as if they matched all the way to the start or end
 export const EDGE_TOLERANCE = 1;
 // If a card has almost an entire card within it, with at most INSIDE_TOLERANCE sentences missing from the start or end, it will be treated as if the entire card matched
-export const INSIDE_TOLERANCE = 1;
+export const INSIDE_TOLERANCE = 2;
 /* 
   Regex used to split text into sentences 
   Matches puncuation followed by (whitespace + capital letter) and allows citiation numbers (ex. Sample text.123 Next sentence)

@@ -13,9 +13,10 @@ export const getSentences = (text: string, cutoff = 20): string[] | undefined =>
     .filter((el: string) => el.length >= cutoff);
 };
 
-const checkMatch = (a: MatchInfo, b: MatchInfo) =>
-  a.cardLen - (min(a.indexes) - max(a.indexes)) <= INSIDE_TOLERANCE || // If the enterity of A matches
-  (min(a.indexes) <= EDGE_TOLERANCE && b.cardLen - max(b.indexes) <= EDGE_TOLERANCE); // If matches the start of A and the end of B
+const checkMatch = (a: MatchInfo, b: MatchInfo) => {
+  const insideMatch = a.cardLen > 3 && a.cardLen - (max(a.indexes) + 1 - min(a.indexes)) <= INSIDE_TOLERANCE; // If the enterity of A matches
+  return insideMatch || (min(a.indexes) <= EDGE_TOLERANCE && b.cardLen - max(b.indexes) <= EDGE_TOLERANCE); // If matches the start of A and the end of B
+};
 // Check in both orders
 const isMatch = (info: MatchPair) => checkMatch(info.a, info.b) || checkMatch(info.b, info.a);
 
