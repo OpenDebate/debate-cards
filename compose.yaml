@@ -32,7 +32,7 @@ services:
       - 6379:6379
     expose:
       - 6379
-    volumes: 
+    volumes:
       - redis:/data
   pgsync:
     build:
@@ -44,9 +44,9 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy   
+        condition: service_healthy
       migrate:
-        condition: service_completed_successfully   
+        condition: service_completed_successfully
     environment:
       - PG_USER=${POSTGRES_USER}
       - PG_HOST=postgres
@@ -83,7 +83,7 @@ services:
     volumes:
       - ./src:/app/src
   migrate:
-    build: 
+    build:
       context: .
       dockerfile: ./prisma/Dockerfile
     depends_on:
