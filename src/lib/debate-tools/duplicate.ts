@@ -1,11 +1,14 @@
-import { SentenceMatch, Sentence, Info, Children, redis } from 'app/lib/redis';
 import { EDGE_TOLERANCE, INSIDE_TOLERANCE, SENTENCE_REGEX } from 'app/constants';
-import { groupBy, map, min, max, uniq } from 'lodash';
+import { RedisContext, redis } from 'app/modules/deduplicator/redis';
+import { db } from 'app/lib';
+import { SubBucketEntity } from 'app/modules/deduplicator/SubBucket';
 import { WatchError } from 'redis';
+import { maxBy, uniq } from 'lodash';
 
-type MatchInfo = { cardLen: number; indexes: number[] };
-type MatchPair = { cardId: number; a: MatchInfo; b: MatchInfo };
+export type SentenceMatch = { matchId: number; index: number };
 
+type MatchInfo = { cardLen: number; min: number; max: number };
+type MatchPair = { a: MatchInfo; b: MatchInfo };
 export const getSentences = (text: string, cutoff = 20): string[] | undefined => {
   return text
     ?.split(SENTENCE_REGEX)
@@ -13,77 +16,114 @@ export const getSentences = (text: string, cutoff = 20): string[] | undefined =>
     .filter((el: string) => el.length >= cutoff);
 };
 
-const checkMatch = (a: MatchInfo, b: MatchInfo) => {
-  const insideMatch = a.cardLen > 3 && a.cardLen - (max(a.indexes) + 1 - min(a.indexes)) <= INSIDE_TOLERANCE; // If the enterity of A matches
-  return insideMatch || (min(a.indexes) <= EDGE_TOLERANCE && b.cardLen - max(b.indexes) <= EDGE_TOLERANCE); // If matches the start of A and the end of B
+const checkMatch = (
+  { cardLen: aLen, min: aMin, max: aMax }: MatchInfo,
+  { cardLen: bLen, min: bMin, max: bMax }: MatchInfo,
+) => {
+  const insideMatch = aLen > 3 && aLen - (aMax + 1 - aMin) <= INSIDE_TOLERANCE; // If the enterity of A matches
+  return insideMatch || (aMin <= EDGE_TOLERANCE && bLen - bMax <= EDGE_TOLERANCE); // If matches the start of A and the end of B
 };
-// Check in both orders
+// // Check in both orders
 const isMatch = (info: MatchPair) => checkMatch(info.a, info.b) || checkMatch(info.b, info.a);
 
-export const getMatching = async (matches: SentenceMatch[][], baseId: number, client = redis): Promise<number[]> => {
-  // Keep index in both cards
-  const matchIndexes = matches
-    .flatMap((sentence, i) => sentence.map(({ cardId, index }) => ({ cardId, aIndex: i, bIndex: index })))
-    .filter((match) => match.cardId !== baseId);
-
-  const matchInfo: MatchPair[] = await Promise.all(
-    map(groupBy(matchIndexes, 'cardId'), async (val, key) => ({
-      cardId: +key,
-      a: { indexes: map(val, 'aIndex'), cardLen: matches.length },
-      b: { indexes: map(val, 'bIndex'), cardLen: await Info.get(+key, 'length', client) },
-    })),
+export async function getMatching(
+  context: RedisContext,
+  cardId: number,
+): Promise<{ matches: number[]; existingSentences: boolean }> {
+  const sentences = (await loadSentences(cardId)) ?? [];
+  /* 
+    Watch for change in sentences, prevents new card being added that this card should match and it being missed
+    Will have a decent amonunt of false positives due to bucketing of sentences
+    Probability a card completes without a retry is roughly
+    (1 - ((sentencesPerCard * concurrentDeduplication) / numBuckets))^sentencesPerCard
+    sentencesPerCard seems to be roughly 30
+    With 25 concurrent deduplications happening, and 2^20 buckets, probability is around 0.98
+  */
+  const sentenceEntities = await context.sentenceRepository.getMany(sentences);
+  const canidateIds = uniq(sentenceEntities.flatMap((entity) => entity.matches).map((match) => match.matchId));
+  const cardLens = (await context.cardLengthRepository.getMany(canidateIds)).reduce<Record<number, number>>(
+    (prev, current, i) => {
+      prev[canidateIds[i]] = current.length;
+      return prev;
+    },
+    {},
   );
 
-  return map(matchInfo.filter(isMatch), 'cardId');
+  const matchInfo: Record<string, MatchPair> = {};
+  for (let aIndex = 0; aIndex < sentenceEntities.length; aIndex++) {
+    const matches = sentenceEntities[aIndex].matches;
+    for (const { matchId, index: bIndex } of matches) {
+      if (matchId === cardId) continue;
+      if (!(matchId in matchInfo))
+        matchInfo[matchId] = {
+          a: { cardLen: sentenceEntities.length, min: aIndex, max: aIndex },
+          b: { cardLen: cardLens[matchId], min: bIndex, max: bIndex },
+        };
+      else {
+        matchInfo[matchId].a.max = aIndex;
+        matchInfo[matchId].b.max = bIndex;
+      }
+    }
+  }
+
+  const matches: number[] = [];
+  for (const id in matchInfo) {
+    if (isMatch(matchInfo[id])) matches.push(+id);
+  }
+  return { matches, existingSentences: canidateIds.includes(cardId) };
+}
+
+const loadSentences = async (id: number) => {
+  if (!id) return [];
+  const card = await db.evidence.findUnique({ where: { id }, select: { id: true, fulltext: true } });
+  if (!card?.fulltext) throw new Error(`Card with id ${id} does not exist`);
+
+  return getSentences(card.fulltext);
 };
 
-export const dedup = async (id: number, sentences: string[]): Promise<{ rootId: number; evidenceIds: number[] }> => {
-  let evidenceIds = [id];
-  let rootId = id;
-  if (!sentences.length) return { rootId, evidenceIds };
+export type Updates = {
+  deletes: number[];
+  updates: {
+    bucketId: number;
+    cardIds: number[];
+  }[];
+};
+
+export async function dedup(id: number, sentences: string[]): Promise<Updates> {
+  // If card dosen't have any sentences, just return a bucket with itself
+  if (!sentences.length) return { updates: [{ bucketId: id, cardIds: [id] }], deletes: [] };
   // Uses optimisitc locking through WATCH commands to prevent concurrency issues
   // https://redis.io/docs/manual/transactions/#optimistic-locking-using-check-and-set
   try {
-    await redis.executeIsolated(async (client) => {
-      /* 
-        Watch for change in sentences, prevents new card being added that this card should match and it being missed
-        Will have a decent amonunt of false positives due to bucketing of sentences
-        Probability a card completes without a retry is roughly
-        (1 - ((sentencesPerCard * concurrentDeduplication) / numBuckets))^sentencesPerCard
-        sentencesPerCard seems to be roughly 30
-        With 25 concurrent deduplications happening, and 2^20 buckets, probability is around 0.98
-      */
-      await client.watch(sentences.map(Sentence.redisKey));
-      // Get matching cards
-      const matches = await Promise.all(sentences.map((s) => Sentence.get(s, client)));
-      const filteredMatches = await getMatching(matches, id, client); // Lengths never change so no need to watch
-      if (filteredMatches.length) {
-        // Watch for change in parent of matching cards
-        await client.watch(filteredMatches.map((match) => Info.redisKey(match, 'parent')));
-        // Get parents of matches
-        const parents = uniq(await Promise.all(filteredMatches.map((card) => Info.get(card, 'parent', client))));
-        rootId = min(parents) ?? id;
+    return await redis.executeIsolated(async (client) => {
+      const context = new RedisContext(client);
+      context.cardLengthRepository.create(id, sentences.length);
 
-        /*
-         Prevents merging into a bucket that got merged into something else and had its children reset
-         Prevents merging child that just had evidence added to it and missing the additions
-        */
-        await client.watch(parents.map(Children.redisKey));
-        const children = await Promise.all(parents.map(async (parent) => Children.get(parent, client)));
-        evidenceIds = uniq(evidenceIds.concat(parents, children.flat()));
+      const { existingSentences, matches: matchedCards } = await getMatching(context, id);
+      const cardSubBuckets = await context.cardSubBucketRepository.getMany(matchedCards);
+      const bucketCandidates = uniq(cardSubBuckets.map((card) => card?.subBucket)).filter((el) => el);
+      bucketCandidates.forEach((b) => b.setMatches(id, matchedCards));
+      const matchedBuckets = bucketCandidates.filter((b) => b.doesBucketMatch(matchedCards));
+
+      let addBucket: SubBucketEntity;
+      if (!matchedBuckets.length) {
+        addBucket = context.subBucketRepository.create(id, matchedCards);
+      } else {
+        // Add to largest bucket the card matches
+        addBucket = maxBy(matchedBuckets, (b) => b.size);
+        await addBucket.addCard(id, matchedCards);
       }
+      await addBucket.resolve(matchedCards);
 
-      const transaction = client.multi();
-      if (sentences.length) Info.set(id, 'length', sentences.length, transaction);
-      sentences.forEach((sentence, i) => Sentence.set(sentence, [{ cardId: id, index: i }], transaction));
-      Children.set(rootId, evidenceIds, transaction);
-
-      return transaction.exec();
+      // Only add sentences if they arent already there, prevents duplicates when reprocessing
+      if (!existingSentences) {
+        const sentenceEntities = await context.sentenceRepository.getMany(sentences);
+        sentenceEntities.forEach((entity, i) => entity.addMatch({ matchId: id, index: i }));
+      }
+      return context.finish();
     });
   } catch (err) {
-    if (err instanceof WatchError)
-      return dedup(id, sentences); // If watch error retry, only happens a few percent of the time
+    if (err instanceof WatchError) return dedup(id, sentences);
     else throw err;
   }
-  return { rootId, evidenceIds };
-};
+}

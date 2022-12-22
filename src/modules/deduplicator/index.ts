@@ -18,9 +18,8 @@ export default {
           await db.evidence.findMany({
             where: { bucketId: null },
             select: { gid: true },
-            // Setting a value for take makes the results be returned in order
-            // This reduces contention because cards from the same file are less likley to be duplicates
-            take: take ?? 1000 * 1000 * 1000,
+            orderBy: { id: 'asc' }, // Sequential cards are less likley to be duplicates, reduces contention,
+            take: take ?? undefined,
           }),
         );
       return tasks;

@@ -6,14 +6,15 @@ export default async ({ gid }: { gid: string }): Promise<any> => {
   const { id, fulltext } = await db.evidence.findUnique({ where: { gid }, select: { id: true, fulltext: true } });
   const sentences = getSentences(fulltext) ?? [];
 
-  const { rootId, evidenceIds } = await dedup(id, sentences);
-
+  const { deletes, updates } = await dedup(id, sentences);
   return db.$transaction([
-    db.evidenceBucket.deleteMany({ where: { rootId: { in: evidenceIds.filter((id) => id !== rootId) } } }),
-    db.evidenceBucket.upsert({
-      where: { rootId },
-      create: { rootId, count: evidenceIds.length, evidence: { connect: evidenceIds.map((id) => ({ id })) } },
-      update: { rootId, count: evidenceIds.length, evidence: { set: evidenceIds.map((id) => ({ id })) } },
-    }),
+    db.evidenceBucket.deleteMany({ where: { id: { in: deletes } } }),
+    ...updates.map(({ bucketId: rootId, cardIds }) =>
+      db.evidenceBucket.upsert({
+        where: { rootId },
+        create: { rootId, count: cardIds.length, evidence: { connect: cardIds.map((id) => ({ id })) } },
+        update: { rootId, count: cardIds.length, evidence: { set: cardIds.map((id) => ({ id })) } },
+      }),
+    ),
   ]);
 };

@@ -8,6 +8,14 @@ export const CONCURRENT_DEDUPLICATION = 20;
 export const EDGE_TOLERANCE = 1;
 // If a card has almost an entire card within it, with at most INSIDE_TOLERANCE sentences missing from the start or end, it will be treated as if the entire card matched
 export const INSIDE_TOLERANCE = 2;
+
+// Whether a card card that matches `matching` out of `total` cards in a SubBucket should be added to it
+export const SHOULD_MATCH = (matching: number, total: number) => matching / total > 0.5;
+
+// Whether BucketSets which `matching` out of `total` cards should be merged
+// Also whether a card should be considered as a match for the purposes of merging
+export const SHOULD_MERGE = (matching: number, total: number) => matching > 5 || matching / total >= 0.2;
+
 /* 
   Regex used to split text into sentences 
   Matches puncuation followed by (whitespace + capital letter) and allows citiation numbers (ex. Sample text.123 Next sentence)
