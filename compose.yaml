@@ -63,8 +63,6 @@ services:
       - postgres
       - redis
     env_file: .env
-    ports:
-      - 5555:5555 # Prisma studio port
     profiles:
       - tasks # Dont start by default
     volumes:
@@ -78,6 +76,7 @@ services:
     env_file: .env
     ports:
       - 4000:4000
+      - 5555:5555 # Prisma studio port
     expose:
       - 4000
     volumes:
