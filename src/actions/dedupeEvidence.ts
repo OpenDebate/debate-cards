@@ -8,7 +8,7 @@ export default async ({ gid }: { gid: string }): Promise<any> => {
 
   const { deletes, updates } = await dedup(id, sentences);
   return db.$transaction([
-    db.evidenceBucket.deleteMany({ where: { id: { in: deletes } } }),
+    db.evidenceBucket.deleteMany({ where: { rootId: { in: deletes } } }),
     ...updates.map(({ bucketId: rootId, cardIds }) =>
       db.evidenceBucket.upsert({
         where: { rootId },

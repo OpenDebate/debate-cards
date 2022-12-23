@@ -36,6 +36,8 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
   public async propogateKey() {
     const newKey = this.createKey();
     if (this.key === newKey) return;
+    if (this._subBucketIds.size === 0) return this.context.bucketSetRepository.delete(this.key);
+
     const subBuckets = await this.getSubBuckets();
     subBuckets.forEach((subBucket) => (subBucket.bucketSetId = newKey)); // Have to explicitly set
     this.context.bucketSetRepository.renameCacheKey(this.key, newKey);
