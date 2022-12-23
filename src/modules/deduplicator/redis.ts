@@ -128,19 +128,16 @@ export class RedisContext {
     updatedBucketSets = uniq(updatedBucketSets);
     const deletedBucketSets = this.bucketSetRepository.deletions;
 
+    const updates = await Promise.all(
+      updatedBucketSets.map(async (bucketSet) => ({
+        bucketId: bucketSet.key,
+        cardIds: (await bucketSet.getSubBuckets()).flatMap((bucket) => bucket?.members),
+      })),
+    );
     const deletes = updatedBucketSets
       .filter((bucketSet) => bucketSet.originalKey !== bucketSet.key)
       .map((bucket) => bucket.originalKey)
       .concat([...deletedBucketSets]);
-    const updates: Updates = {
-      deletes,
-      updates: await Promise.all(
-        updatedBucketSets.map(async (bucketSet) => ({
-          bucketId: bucketSet.key,
-          cardIds: (await bucketSet.getSubBuckets()).flatMap((bucket) => bucket?.members),
-        })),
-      ),
-    };
 
     await this.subBucketRepository.saveAll();
     await this.cardLengthRepository.saveAll();
@@ -149,6 +146,6 @@ export class RedisContext {
     await this.bucketSetRepository.saveAll();
 
     await this.transaction.exec();
-    return updates;
+    return { deletes: uniq(deletes), updates };
   }
 }

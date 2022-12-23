@@ -7,14 +7,19 @@ export default async ({ gid }: { gid: string }): Promise<any> => {
   const sentences = getSentences(fulltext) ?? [];
 
   const { deletes, updates } = await dedup(id, sentences);
-  return db.$transaction([
-    db.evidenceBucket.deleteMany({ where: { rootId: { in: deletes } } }),
-    ...updates.map(({ bucketId: rootId, cardIds }) =>
-      db.evidenceBucket.upsert({
-        where: { rootId },
-        create: { rootId, count: cardIds.length, evidence: { connect: cardIds.map((id) => ({ id })) } },
-        update: { rootId, count: cardIds.length, evidence: { set: cardIds.map((id) => ({ id })) } },
-      }),
-    ),
-  ]);
+  try {
+    return db.$transaction([
+      db.evidenceBucket.deleteMany({ where: { rootId: { in: deletes } } }),
+      ...updates.map(({ bucketId: rootId, cardIds }) =>
+        db.evidenceBucket.upsert({
+          where: { rootId },
+          create: { rootId, count: cardIds.length, evidence: { connect: cardIds.map((id) => ({ id })) } },
+          update: { rootId, count: cardIds.length, evidence: { set: cardIds.map((id) => ({ id })) } },
+        }),
+      ),
+    ]);
+  } catch (err) {
+    // Not sure if should retry here
+    throw new Error(`Failed to dedup ${gid}`, { cause: err });
+  }
 };
