@@ -40,10 +40,28 @@ export abstract class Repository<E extends BaseEntity<string | number, unknown>,
     const obj = (await this.getKeys([key]))[0];
     return isEmpty(obj) ? null : obj;
   }
+  protected async load(key: K) {
+    const obj = await this.getKey(key);
+    if (isEmpty(obj)) return null;
+    const entity = this.fromRedis(obj, key);
+    if (!entity) return null;
+    this.cache.set(key, entity);
+    return entity;
+  }
+  public async get(key: K): Promise<E> | null {
+    // Add to cache right away so concurrent requests get the same object
+    if (!this.cache.has(key)) this.cache.set(key, this.load(key));
+    return this.cache.get(key);
+  }
+  public async getMany(keys: readonly K[]): Promise<(E | null)[]> {
+    return Promise.all(keys.map((key) => this.get(key)));
+  }
+  public async getUpdated(): Promise<E[]> {
+    return (await Promise.all(this.cache.values())).filter((e) => e?.updated);
+  }
 
-  abstract createNew(key: K, ...args: any[]): E;
   abstract fromRedis(obj: Record<string, unknown>, key: K): E | Promise<E>;
-
+  abstract createNew(key: K, ...args: any[]): E;
   public create(key: K, ...args: any[]) {
     const entity = this.createNew(key, ...args);
     this.cache.set(key, entity);
@@ -56,33 +74,9 @@ export abstract class Repository<E extends BaseEntity<string | number, unknown>,
     this.cache.delete(oldKey);
     this.context.transaction.del(this.prefix + oldKey);
   }
-
   public delete(key: K) {
     this.cache.set(key, null);
     this.deletions.add(key);
-  }
-
-  protected async load(key: K) {
-    const obj = await this.getKey(key);
-    if (isEmpty(obj)) return null;
-    const entity = this.fromRedis(obj, key);
-    if (!entity) return null;
-    this.cache.set(key, entity);
-    return entity;
-  }
-
-  public async get(key: K): Promise<E> | null {
-    // Add to cache right away so concurrent requests get the same object
-    if (!this.cache.has(key)) this.cache.set(key, this.load(key));
-    return this.cache.get(key);
-  }
-
-  public async getMany(keys: readonly K[]): Promise<(E | null)[]> {
-    return Promise.all(keys.map((key) => this.get(key)));
-  }
-
-  public async getUpdated(): Promise<E[]> {
-    return (await Promise.all(this.cache.values())).filter((e) => e?.updated);
   }
 
   public async save(e: E): Promise<unknown> {
@@ -92,7 +86,6 @@ export abstract class Repository<E extends BaseEntity<string | number, unknown>,
       ([subKey, value]) => value && this.context.transaction.hSet(`${this.prefix}${key}`, subKey, value),
     );
   }
-
   public async saveAll() {
     const updated = await this.getUpdated();
     for (const key of this.deletions) this.context.transaction.del(this.prefix + key);
@@ -109,11 +102,11 @@ import { BucketSetRepository } from './BucketSet';
 import { Updates } from 'app/lib/debate-tools/duplicate';
 
 export class RedisContext {
+  transaction: RedisTransaction;
   sentenceRepository: SentenceRepository;
   cardLengthRepository: CardLengthRepository;
   cardSubBucketRepository: CardSubBucketRepository;
   subBucketRepository: SubBucketRepository;
-  transaction: RedisTransaction;
   bucketSetRepository: BucketSetRepository;
 
   constructor(public client: RedisType) {
