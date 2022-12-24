@@ -25,10 +25,9 @@ export type BucketSetEntity = BucketSet;
 class BucketSet implements DynamicKeyEntity<number, string[]> {
   private _subBucketIds: Set<number>;
   public key: number;
-  public readonly originalKey: number;
   constructor(public context: RedisContext, subBucketIds: number[], public updated: boolean = false) {
     this._subBucketIds = new Set(subBucketIds);
-    this.originalKey = this.key = this.createKey();
+    this.key = this.createKey();
   }
   createKey() {
     return Math.min(...this.subBucketIds);
@@ -57,8 +56,7 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
     this.context.bucketSetRepository.delete(bucketSet.key);
 
     this._subBucketIds = new Set([...this._subBucketIds, ...bucketSet.subBucketIds]);
-    bucketSet.updated = true;
-    bucketSet._subBucketIds = new Set();
+    this.context.bucketSetRepository.delete(bucketSet.key);
 
     (await this.getSubBuckets()).forEach((subBucket) => (subBucket.bucketSetId = this.key));
     return this.propogateKey();
@@ -122,7 +120,7 @@ export class BucketSetRepository extends Repository<BucketSet, number> {
   }
   async save(e: BucketSet) {
     e.updated = false;
-    this.context.transaction.del(this.prefix + e.originalKey);
+    this.context.transaction.del(this.prefix + e.key);
     if (e.subBucketIds.length <= 1) return; // Dont bother saving sigle member bucket sets
     return this.context.transaction.sAdd(this.prefix + e.key, e.toRedis());
   }
