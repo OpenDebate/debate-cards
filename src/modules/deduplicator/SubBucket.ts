@@ -169,7 +169,7 @@ class SubBucket implements DynamicKeyEntity<number>, CardSet {
   }
 
   toRedis() {
-    const obj: Record<string, string> = { sb: this._bucketSetId.toString() };
+    const obj: Record<string, string> = { bs: this._bucketSetId.toString() };
     for (const [cardId, count] of this.cards) obj[`c${cardId}`] = count.toString();
     for (const [matchId, count] of this.matching) obj[`m${matchId}`] = count.toString();
     return obj;
@@ -188,7 +188,7 @@ export class SubBucketRepository extends Repository<SubBucket, number> {
       const value = +obj[key];
       if (type === 'c') cards.set(id, value);
       else if (type === 'm') matches.set(id, value);
-      else if (key === 'sb') bucketSetId = value;
+      else if (key === 'bs') bucketSetId = value;
       else throw new Error(`Invalid key ${key} loading SubBucket`);
     }
     return new SubBucket(this.context, cards, matches, bucketSetId, false);
