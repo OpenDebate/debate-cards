@@ -88,9 +88,10 @@ class SubBucket implements DynamicKeyEntity<number>, CardSet {
   }
 
   async addCard(id: number, matches: number[]) {
-    this.updated = true;
     this._matching.delete(id);
+    if (this.cards.has(id)) return;
 
+    this.updated = true;
     // Update match counts
     this._cards.set(id, 1);
     for (const match of matches) {
@@ -202,7 +203,7 @@ export class SubBucketRepository extends Repository<SubBucket, number> {
   }
 
   save(e: SubBucket) {
-    this.context.transaction.del(`${this.prefix}${e.key.toString()}`);
+    this.context.transaction.del(this.prefix + e.key);
     return super.save(e);
   }
 }
