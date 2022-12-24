@@ -63,6 +63,7 @@ export abstract class Repository<E extends BaseEntity<string | number, unknown>,
   abstract fromRedis(obj: Record<string, unknown>, key: K): E | Promise<E>;
   abstract createNew(key: K, ...args: any[]): E;
   public create(key: K, ...args: any[]) {
+    this.context.client.watch(this.prefix + key);
     const entity = this.createNew(key, ...args);
     this.cache.set(key, entity);
     return entity;
