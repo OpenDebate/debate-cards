@@ -96,7 +96,8 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
         )
       ) {
         await this.removeSubBucket(subBucket);
-        return this.resolve();
+        // Make sure this wasnt merged into something else
+        if ((await this.context.bucketSetRepository.get(this.key)) === this) return this.resolve();
       }
     }
   }
