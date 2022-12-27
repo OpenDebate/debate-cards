@@ -36,11 +36,11 @@ export abstract class Repository<E extends BaseEntity<string | number, unknown>,
     this.context.client.watch(keys.filter((key) => !this.cache.has(key)).map((key) => this.prefix + key));
     return Promise.all(keys.map((key) => this.context.client.hGetAll(`${this.prefix}${key}`)));
   }
-  protected async getKey(key: K) {
+  protected async getKey(key: K): Promise<Record<string, string>> {
     const obj = (await this.getKeys([key]))[0];
     return isEmpty(obj) ? null : obj;
   }
-  protected async load(key: K) {
+  protected async load(key: K): Promise<E> {
     const obj = await this.getKey(key);
     if (isEmpty(obj)) return null;
     const entity = this.fromRedis(obj, key);
@@ -62,20 +62,20 @@ export abstract class Repository<E extends BaseEntity<string | number, unknown>,
 
   abstract fromRedis(obj: Record<string, unknown>, key: K): E | Promise<E>;
   abstract createNew(key: K, ...args: any[]): E;
-  public create(key: K, ...args: any[]) {
+  public create(key: K, ...args: any[]): E {
     this.context.client.watch(this.prefix + key);
     const entity = this.createNew(key, ...args);
     this.cache.set(key, entity);
     return entity;
   }
 
-  public async renameCacheKey(oldKey: K, newKey: K) {
+  public async renameCacheKey(oldKey: K, newKey: K): Promise<void> {
     const value = this.cache.get(oldKey);
     this.cache.set(newKey, value);
     this.cache.delete(oldKey);
     this.context.transaction.del(this.prefix + oldKey);
   }
-  public delete(key: K) {
+  public delete(key: K): void {
     this.cache.set(key, null);
     this.deletions.add(key);
   }
@@ -87,7 +87,7 @@ export abstract class Repository<E extends BaseEntity<string | number, unknown>,
       ([subKey, value]) => value && this.context.transaction.hSet(`${this.prefix}${key}`, subKey, value),
     );
   }
-  public async saveAll() {
+  public async saveAll(): Promise<unknown> {
     const updated = await this.getUpdated();
     for (const key of this.deletions) this.context.transaction.del(this.prefix + key);
     this.deletions = new Set();

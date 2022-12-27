@@ -24,10 +24,10 @@ class CardLength implements BaseEntity<number> {
 export class CardLengthRepository extends Repository<CardLength, number> {
   protected prefix = 'C:';
 
-  async fromRedis(obj: { l: string; sb: string }, key: number) {
+  async fromRedis(obj: { l: string; sb: string }, key: number): Promise<CardLength> {
     return new CardLength(this.context, key, false, +obj.l);
   }
-  createNew(key: number, length: number) {
+  createNew(key: number, length: number): CardLength {
     return new CardLength(this.context, key, true, length);
   }
 }

@@ -180,7 +180,7 @@ class SubBucket implements DynamicKeyEntity<number>, CardSet {
 export class SubBucketRepository extends Repository<SubBucket, number> {
   protected prefix = 'SB:';
 
-  fromRedis(obj: Record<string, string>, key: number) {
+  fromRedis(obj: Record<string, string>, key: number): SubBucket {
     const cards: Map<number, number> = new Map();
     const matches: Map<number, number> = new Map();
     let bucketSetId = key;
@@ -194,7 +194,7 @@ export class SubBucketRepository extends Repository<SubBucket, number> {
     }
     return new SubBucket(this.context, cards, matches, bucketSetId, false);
   }
-  createNew(root: number, matches: number[]) {
+  createNew(root: number, matches: number[]): SubBucket {
     const cards = new Map([[root, 1]]);
     const matchMap = new Map(matches.map((match) => [match, 1]));
     const subBucket = new SubBucket(this.context, cards, matchMap, root, true);
@@ -202,7 +202,7 @@ export class SubBucketRepository extends Repository<SubBucket, number> {
     return subBucket;
   }
 
-  save(e: SubBucket) {
+  save(e: SubBucket): Promise<unknown> {
     this.context.transaction.del(this.prefix + e.key);
     return super.save(e);
   }

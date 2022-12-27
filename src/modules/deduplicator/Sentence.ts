@@ -56,7 +56,7 @@ class Sentence implements BaseEntity<string, string> {
 export class SentenceRepository extends Repository<Sentence, string> {
   protected prefix = 'S:';
 
-  fromRedis(obj: { data: Buffer }, sentence: string) {
+  fromRedis(obj: { data: Buffer }, sentence: string): Sentence {
     const { data } = obj;
     if (!data) return new Sentence(this.context, sentence, []);
     if (data.length % 11 != 0) throw new Error(`Data for bucket ${sentence} has invalid length of ${data.length}`);
@@ -73,7 +73,7 @@ export class SentenceRepository extends Repository<Sentence, string> {
     return new Sentence(this.context, sentence, matches, true);
   }
 
-  protected async load(sentence: string) {
+  protected async load(sentence: string): Promise<Sentence> {
     const { bucket } = Sentence.createKey(sentence);
     this.context.client.watch(this.prefix + bucket);
     const data = await this.context.client.get(commandOptions({ returnBuffers: true }), this.prefix + bucket);

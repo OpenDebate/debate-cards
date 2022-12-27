@@ -25,15 +25,15 @@ class CardSubBucket implements BaseEntity<number> {
 export class CardSubBucketRepository extends Repository<CardSubBucket, number> {
   protected prefix = 'C:';
 
-  async fromRedis(obj: { sb: string }, key: number) {
+  async fromRedis(obj: { sb: string }, key: number): Promise<CardSubBucket> {
     if (!obj.sb) return null;
     return new CardSubBucket(this.context, key, false, await this.context.subBucketRepository.get(+obj.sb));
   }
-  createNew(key: number, subBucket: SubBucketEntity) {
+  createNew(key: number, subBucket: SubBucketEntity): CardSubBucket {
     return new CardSubBucket(this.context, key, true, subBucket);
   }
 
-  async reset(key: number) {
+  async reset(key: number): Promise<void> {
     this.context.transaction.hDel(this.prefix + key, 'sb');
     const entity = await this.get(key);
     if (entity) entity.subBucket = null;

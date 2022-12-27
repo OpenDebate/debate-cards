@@ -17,7 +17,7 @@ function checkAdd(a: CardSet, b: CardSet) {
   return SHOULD_MERGE(matches.length, b.size);
 }
 
-export function shouldMerge(a: readonly SubBucketEntity[], b: readonly SubBucketEntity[]) {
+export function shouldMerge(a: readonly SubBucketEntity[], b: readonly SubBucketEntity[]): boolean {
   const subBuckets = a.concat(b);
   return subBuckets.every((subBucket) => {
     const aCardSet = toCardSet([subBucket]);
@@ -110,10 +110,10 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
 export class BucketSetRepository extends Repository<BucketSet, number> {
   protected prefix = 'BS:';
 
-  async fromRedis({ subBucketIds }: { subBucketIds: number[] }) {
+  async fromRedis({ subBucketIds }: { subBucketIds: number[] }): Promise<BucketSet> {
     return new BucketSet(this.context, subBucketIds, true);
   }
-  createNew(key: number, subBucketIds: number[]) {
+  createNew(key: number, subBucketIds: number[]): BucketSet {
     return new BucketSet(this.context, subBucketIds, true);
   }
 
@@ -123,7 +123,7 @@ export class BucketSetRepository extends Repository<BucketSet, number> {
     if (!subBuckets?.length) return this.fromRedis({ subBucketIds: [key] });
     return this.fromRedis({ subBucketIds: subBuckets.map(Number) });
   }
-  async save(e: BucketSet) {
+  async save(e: BucketSet): Promise<unknown> {
     e.updated = false;
     this.context.transaction.del(this.prefix + e.key);
     if (e.subBucketIds.length <= 1) return; // Dont bother saving sigle member bucket sets

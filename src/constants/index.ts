@@ -10,11 +10,11 @@ export const EDGE_TOLERANCE = 1;
 export const INSIDE_TOLERANCE = 2;
 
 // Whether a card card that matches `matching` out of `total` cards in a SubBucket should be added to it
-export const SHOULD_MATCH = (matching: number, total: number) => matching / total > 0.5;
+export const SHOULD_MATCH = (matching: number, total: number): boolean => matching / total > 0.5;
 
 // Whether BucketSets which `matching` out of `total` cards should be merged
 // Also whether a card should be considered as a match for the purposes of merging
-export const SHOULD_MERGE = (matching: number, total: number) => matching > 5 || matching / total >= 0.2;
+export const SHOULD_MERGE = (matching: number, total: number): boolean => matching > 5 || matching / total >= 0.2;
 
 /* 
   Regex used to split text into sentences 
