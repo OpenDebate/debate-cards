@@ -97,30 +97,35 @@ export async function dedup(id: number, sentences: string[]): Promise<Updates> {
   try {
     return await redis.executeIsolated(async (client) => {
       const context = new RedisContext(client);
-      context.cardLengthRepository.create(id, sentences.length);
+      try {
+        context.cardLengthRepository.create(id, sentences.length);
 
-      const { existingSentences, matches: matchedCards } = await getMatching(context, id);
-      const cardSubBuckets = await context.cardSubBucketRepository.getMany(matchedCards);
-      const bucketCandidates = uniq(cardSubBuckets.map((card) => card?.subBucket)).filter((el) => el);
-      bucketCandidates.forEach((b) => b.setMatches(id, matchedCards));
-      const matchedBuckets = bucketCandidates.filter((b) => b.doesBucketMatch(matchedCards));
+        const { existingSentences, matches: matchedCards } = await getMatching(context, id);
+        const cardSubBuckets = await context.cardSubBucketRepository.getMany(matchedCards);
+        const bucketCandidates = uniq(cardSubBuckets.map((card) => card?.subBucket)).filter((el) => el);
+        bucketCandidates.forEach((b) => b.setMatches(id, matchedCards));
+        const matchedBuckets = bucketCandidates.filter((b) => b.doesBucketMatch(matchedCards));
 
-      let addBucket: SubBucketEntity;
-      if (!matchedBuckets.length) {
-        addBucket = context.subBucketRepository.create(id, matchedCards);
-      } else {
-        // Add to largest bucket the card matches
-        addBucket = maxBy(matchedBuckets, (b) => b.size);
-        await addBucket.addCard(id, matchedCards);
+        let addBucket: SubBucketEntity;
+        if (!matchedBuckets.length) {
+          addBucket = context.subBucketRepository.create(id, matchedCards);
+        } else {
+          // Add to largest bucket the card matches
+          addBucket = maxBy(matchedBuckets, (b) => b.size);
+          await addBucket.addCard(id, matchedCards);
+        }
+        await addBucket.resolve(matchedCards);
+
+        // Only add sentences if they arent already there, prevents duplicates when reprocessing
+        if (!existingSentences) {
+          const sentenceEntities = await context.sentenceRepository.getMany(sentences);
+          sentenceEntities.forEach((entity, i) => entity.addMatch({ matchId: id, index: i }));
+        }
+        return context.finish();
+      } catch (err) {
+        context.transaction.discard();
+        throw err;
       }
-      await addBucket.resolve(matchedCards);
-
-      // Only add sentences if they arent already there, prevents duplicates when reprocessing
-      if (!existingSentences) {
-        const sentenceEntities = await context.sentenceRepository.getMany(sentences);
-        sentenceEntities.forEach((entity, i) => entity.addMatch({ matchId: id, index: i }));
-      }
-      return context.finish();
     });
   } catch (err) {
     if (err instanceof WatchError) return dedup(id, sentences);
