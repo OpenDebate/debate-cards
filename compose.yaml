@@ -63,6 +63,8 @@ services:
       - postgres
       - redis
     env_file: .env
+    ports:
+      - 9229:9229 # Debugging
     profiles:
       - tasks # Dont start by default
     volumes:
@@ -77,6 +79,7 @@ services:
     ports:
       - 4000:4000
       - 5555:5555 # Prisma studio port
+      - 9230:9230 # Debugging
     expose:
       - 4000
     volumes:
