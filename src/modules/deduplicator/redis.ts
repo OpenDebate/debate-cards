@@ -33,7 +33,7 @@ export abstract class Repository<E extends BaseEntity<string | number, unknown>,
   }
 
   protected getKeys(keys: K[]): Promise<Record<string, string>[]> {
-    this.context.client.watch(keys.filter((key) => !this.cache.has(key)).map(String));
+    this.context.client.watch(keys.filter((key) => !this.cache.has(key)).map((key) => this.prefix + key));
     return Promise.all(keys.map((key) => this.context.client.hGetAll(`${this.prefix}${key}`)));
   }
   protected async getKey(key: K) {
