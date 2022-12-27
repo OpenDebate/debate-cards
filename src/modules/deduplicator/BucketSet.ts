@@ -18,7 +18,12 @@ function checkAdd(a: CardSet, b: CardSet) {
 }
 
 export function shouldMerge(a: readonly SubBucketEntity[], b: readonly SubBucketEntity[]) {
-  return checkAdd(toCardSet(a), toCardSet(b));
+  const subBuckets = a.concat(b);
+  return subBuckets.every((subBucket) => {
+    const aCardSet = toCardSet([subBucket]);
+    const bCardSet = toCardSet(subBuckets.filter((s) => s !== subBucket));
+    return checkAdd(aCardSet, bCardSet) || checkAdd(bCardSet, aCardSet);
+  });
 }
 
 export type BucketSetEntity = BucketSet;
@@ -53,10 +58,9 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
 
   async merge(bucketSet: BucketSet) {
     this.updated = true;
-    this.context.bucketSetRepository.delete(bucketSet.key);
 
-    this._subBucketIds = new Set([...this._subBucketIds, ...bucketSet.subBucketIds]);
     this.context.bucketSetRepository.delete(bucketSet.key);
+    this._subBucketIds = new Set([...this._subBucketIds, ...bucketSet.subBucketIds]);
 
     (await this.getSubBuckets()).forEach((subBucket) => (subBucket.bucketSetId = this.key));
     return this.propogateKey();

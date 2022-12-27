@@ -151,9 +151,10 @@ class SubBucket implements DynamicKeyEntity<number>, CardSet {
   }
 
   async resolve(updates: readonly number[]) {
-    const thisBucketSet = await this.getBucketSet();
-
     await this.resolveRemoves();
+    await (await this.getBucketSet()).resolve();
+
+    const thisBucketSet = await this.getBucketSet(); // Might have changed
     // Filter out things that we can garuntee were already counted as matching
     const dontMatch = updates
       .filter((id) => !this.cards.has(id))
@@ -166,7 +167,6 @@ class SubBucket implements DynamicKeyEntity<number>, CardSet {
 
     await this.resolveUpdates(newMatches);
     await this.propogateKey();
-    return thisBucketSet.resolve();
   }
 
   toRedis() {
