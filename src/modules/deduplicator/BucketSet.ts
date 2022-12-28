@@ -2,6 +2,7 @@ import { union } from 'lodash';
 import { DynamicKeyEntity, RedisContext, Repository } from './redis';
 import { CardSet, SubBucketEntity } from './SubBucket';
 import { SHOULD_MERGE } from 'app/constants';
+import { WatchError } from 'redis';
 
 export function toCardSet(subBuckets: readonly SubBucketEntity[]): CardSet {
   const matching = subBuckets.reduce((acc, cur) => {
@@ -58,6 +59,8 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
 
   async merge(bucketSet: BucketSet) {
     this.updated = true;
+    // Prevents potential infinte loop when some reads were outdated
+    if (bucketSet.subBucketIds.find((id) => this._subBucketIds.has(id))) throw new WatchError();
 
     this.context.bucketSetRepository.delete(bucketSet.key);
     this._subBucketIds = new Set([...this._subBucketIds, ...bucketSet.subBucketIds]);
