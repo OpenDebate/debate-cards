@@ -123,7 +123,8 @@ export async function dedup(id: number, sentences: string[]): Promise<Updates> {
         }
         return context.finish();
       } catch (err) {
-        context.transaction.discard();
+        // Makes sure unset commands are flushed, gives an uncaught error otherwise
+        await context.client.quit();
         throw err;
       }
     });
