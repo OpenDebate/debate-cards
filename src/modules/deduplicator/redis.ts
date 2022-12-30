@@ -69,11 +69,9 @@ export abstract class Repository<E extends BaseEntity<string | number, unknown>,
     return entity;
   }
 
-  public async renameCacheKey(oldKey: K, newKey: K): Promise<void> {
-    const value = this.cache.get(oldKey);
-    this.cache.set(newKey, value);
-    this.cache.delete(oldKey);
-    this.context.transaction.del(this.prefix + oldKey);
+  public renameCacheKey(oldKey: K, newKey: K): void {
+    this.cache.set(newKey, this.cache.get(oldKey));
+    this.delete(oldKey);
   }
   public delete(key: K): void {
     this.cache.set(key, null);
