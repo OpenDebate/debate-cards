@@ -1,4 +1,5 @@
 import { db } from 'app/lib';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import { dedup, getSentences } from 'app/lib/debate-tools/duplicate';
 import { onAddEvidence } from './addEvidence';
 
@@ -8,22 +9,21 @@ export default async ({ gid }: { gid: string }): Promise<any> => {
     const { id, fulltext } = await db.evidence.findUnique({ where: { gid }, select: { id: true, fulltext: true } });
     const sentences = getSentences(fulltext) ?? [];
     const { deletes, updates } = await dedup(id, sentences);
-    try {
-      return await db.$transaction([
-        db.evidenceBucket.deleteMany({ where: { rootId: { in: deletes } } }),
-        ...updates.map(({ bucketId: rootId, cardIds }) =>
-          db.evidenceBucket.upsert({
-            where: { rootId },
-            create: { rootId, count: cardIds.length, evidence: { connect: cardIds.map((id) => ({ id })) } },
-            update: { rootId, count: cardIds.length, evidence: { set: cardIds.map((id) => ({ id })) } },
-          }),
-        ),
-      ]);
-    } catch (err) {
+
+    return await db.$transaction([
+      db.evidenceBucket.deleteMany({ where: { rootId: { in: deletes } } }),
+      ...updates.map(({ bucketId: rootId, cardIds }) =>
+        db.evidenceBucket.upsert({
+          where: { rootId },
+          create: { rootId, count: cardIds.length, evidence: { connect: cardIds.map((id) => ({ id })) } },
+          update: { rootId, count: cardIds.length, evidence: { set: cardIds.map((id) => ({ id })) } },
+        }),
+      ),
+    ]);
+  } catch (err) {
+    if (err instanceof PrismaClientKnownRequestError) {
       console.error(`Database error deduping ${gid}, retrying`, err);
       return onAddEvidence.emit({ gid }); // Retry in case of database error
-    }
-  } catch (err) {
-    throw new Error(`Failed to dedup ${gid}`, { cause: err });
+    } else throw new Error(`Failed to dedup ${gid}`, { cause: err });
   }
 };
