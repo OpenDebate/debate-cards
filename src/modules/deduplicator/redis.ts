@@ -1,10 +1,11 @@
 import { createClient } from 'redis';
 import { isEmpty, uniq } from 'lodash';
+import { CONCURRENT_DEDUPLICATION } from 'app/constants';
 
 export const redis = createClient({
   url: 'redis://redis:6379',
   password: 'password',
-  isolationPoolOptions: { max: 10 },
+  isolationPoolOptions: { max: CONCURRENT_DEDUPLICATION },
 });
 
 export type RedisType = typeof redis;

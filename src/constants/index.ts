@@ -1,7 +1,8 @@
 // Max number of files being parsed concurrently, allows parsing to take place while waiting for database response
 export const CONCURRENT_PARSERS = 10;
 // Max number of cards being deduplicated concurrently
-export const CONCURRENT_DEDUPLICATION = 20;
+// Values above number of cpu threads may run into issues with postgres connections
+export const CONCURRENT_DEDUPLICATION = 10;
 
 /* Allow small differences in matching cards to help with things like part of the cite being attached to the start of the card */
 // If a card has EDGE_TOLERANCE different sentences at start or end, will be treated as if they matched all the way to the start or end
