@@ -98,7 +98,7 @@ async function getConnectedBuckets(context: RedisContext, visited: Set<SubBucket
   const cardSubBuckets = (await context.cardSubBucketRepository.getMany(newMatches))
     .map((card) => card?.subBucket)
     .filter((el) => el != null);
-  const newSubBuckets = cardSubBuckets.filter((cardSubBucket) => !visited.has(cardSubBucket));
+  const newSubBuckets = uniq(cardSubBuckets).filter((cardSubBucket) => !visited.has(cardSubBucket));
   if (newSubBuckets.length === 0) {
     const bucketSets = uniq(await Promise.all([...visited.values()].map((subBucket) => subBucket.getBucketSet())));
     const updates = await Promise.all(
@@ -108,11 +108,11 @@ async function getConnectedBuckets(context: RedisContext, visited: Set<SubBucket
       })),
     );
     return {
-      deletes: bucketSets.map((bucketSet) => bucketSet.key),
+      deletes: [],
       updates,
     };
   } else {
-    const newBucketSets = await Promise.all(newSubBuckets.map(async (subBucket) => subBucket.getBucketSet()));
+    const newBucketSets = uniq(await Promise.all(newSubBuckets.map(async (subBucket) => subBucket.getBucketSet())));
     await Promise.all(
       newBucketSets.map(async (bucketSet) => {
         for (const subBucket of await bucketSet.getSubBuckets()) visited.add(subBucket);
