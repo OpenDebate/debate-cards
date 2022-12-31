@@ -1,14 +1,14 @@
 import { intersection } from 'lodash';
 import { getMatching } from 'app/lib/debate-tools/duplicate';
 import { DynamicKeyEntity, RedisContext, Repository } from './redis';
-import { toCardSet, shouldMerge } from './BucketSet';
+import { mergeCardSets, shouldMerge } from './BucketSet';
 import { SHOULD_MATCH, SHOULD_MERGE } from 'app/constants';
 import { onAddEvidence } from 'app/actions/addEvidence';
 import { db } from 'app/lib';
 
 export interface CardSet {
   size: number;
-  members: readonly number[];
+  members: Iterable<number>;
   matching: ReadonlyMap<number, number>;
 }
 
@@ -159,7 +159,7 @@ class SubBucket implements DynamicKeyEntity<number>, CardSet {
     const dontMatch = updates
       .filter((id) => !this.cards.has(id))
       .filter((subBucketId) => !SHOULD_MERGE(this.matching.get(subBucketId) - 1, Infinity));
-    const { matching: setMatching, size: setSize } = toCardSet(await thisBucketSet.getSubBuckets());
+    const { matching: setMatching, size: setSize } = mergeCardSets(await thisBucketSet.getSubBuckets());
     // If there are updated cards that might not have already matched, check if they didnt match before and do now
     const newMatches = dontMatch.filter(
       (id) => SHOULD_MERGE(setMatching.get(id), setSize) && !SHOULD_MERGE(setMatching.get(id) - 1, setSize),

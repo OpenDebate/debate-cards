@@ -1,29 +1,42 @@
-import { union } from 'lodash';
 import { DynamicKeyEntity, RedisContext, Repository } from './redis';
 import { CardSet, SubBucketEntity } from './SubBucket';
 import { SHOULD_MERGE } from 'app/constants';
 import { WatchError } from 'redis';
 
-export function toCardSet(subBuckets: readonly SubBucketEntity[]): CardSet {
-  const matching = subBuckets.reduce((acc, cur) => {
-    for (const [cardId, count] of cur.matching) acc.set(cardId, (acc.get(cardId) ?? 0) + count);
-    return acc;
-  }, new Map<number, number>());
-  const members = union(...subBuckets.map((b) => b.members));
-  return { size: members.length, members, matching };
+// shouldMerge and mergeCardSet are optimized for performance
+export function mergeCardSets(subBuckets: readonly CardSet[]): CardSet {
+  if (subBuckets.length === 1) return subBuckets[0];
+  const matching = new Map<number, number>();
+  const members = new Set<number>();
+  for (const subBucket of subBuckets) {
+    for (const [cardId, count] of subBucket.matching) matching.set(cardId, (matching.get(cardId) ?? 0) + count);
+    for (const member of subBucket.members) members.add(member);
+  }
+
+  return { size: members.size, members, matching };
 }
 
-function checkAdd(a: CardSet, b: CardSet) {
-  const matches = b.members.filter((cardId) => SHOULD_MERGE(a.matching.get(cardId), a.size));
-  return SHOULD_MERGE(matches.length, b.size);
-}
+export function shouldMerge(a: readonly CardSet[], b: readonly CardSet[]): boolean {
+  const cardSets = a.concat(b);
+  const totalCardSet = mergeCardSets(cardSets);
+  return cardSets.every((cardSet) => {
+    const otherSetsSize = totalCardSet.size - cardSet.size;
 
-export function shouldMerge(a: readonly SubBucketEntity[], b: readonly SubBucketEntity[]): boolean {
-  const subBuckets = a.concat(b);
-  return subBuckets.every((subBucket) => {
-    const aCardSet = toCardSet([subBucket]);
-    const bCardSet = toCardSet(subBuckets.filter((s) => s !== subBucket));
-    return checkAdd(aCardSet, bCardSet) || checkAdd(bCardSet, aCardSet);
+    // Have to try merging in both directions
+    let aMergeCount = 0;
+    // Try quicker direction first
+    for (const member of cardSet.members) {
+      // A CardSet wont affect the totalMatching count for its members
+      if (SHOULD_MERGE(totalCardSet.matching.get(member), otherSetsSize)) aMergeCount++;
+    }
+    if (SHOULD_MERGE(aMergeCount, cardSet.size)) return true;
+
+    let bMergeCount = 0;
+    for (const member of totalCardSet.members) {
+      // Match count will be zero for members of cardSet
+      if (SHOULD_MERGE(cardSet.matching.get(member), cardSet.size)) bMergeCount++;
+    }
+    return SHOULD_MERGE(bMergeCount, otherSetsSize);
   });
 }
 
