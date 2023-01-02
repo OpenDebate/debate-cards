@@ -29,8 +29,9 @@ const isMatch = (info: MatchPair) => checkMatch(info.a, info.b) || checkMatch(in
 export async function getMatching(
   context: RedisContext,
   cardId: number,
+  sentences?: string[],
 ): Promise<{ matches: number[]; existingSentences: boolean }> {
-  const sentences = (await loadSentences(cardId)) ?? [];
+  if (!sentences) sentences = (await loadSentences(cardId)) ?? [];
   /* 
     Watch for change in sentences, prevents new card being added that this card should match and it being missed
     Will have a decent amonunt of false positives due to bucketing of sentences
@@ -140,7 +141,7 @@ export async function dedup(id: number, sentences: string[]): Promise<Updates> {
 
         context.cardLengthRepository.create(id, sentences.length);
 
-        const { existingSentences, matches: matchedCards } = await getMatching(context, id);
+        const { existingSentences, matches: matchedCards } = await getMatching(context, id, sentences);
         const cardSubBuckets = await context.cardSubBucketRepository.getMany(matchedCards);
         const bucketCandidates = uniq(cardSubBuckets.map((card) => card?.subBucket)).filter((el) => el);
         bucketCandidates.forEach((b) => b.setMatches(id, matchedCards));
