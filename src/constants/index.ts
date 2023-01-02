@@ -23,6 +23,8 @@ export const SHOULD_MERGE = (matching: number, total: number): boolean => matchi
   Will fail in some weird cases, but should be good enough
 */
 export const SENTENCE_REGEX = /([.?!])+(?=\d*\s+[A-Z])/;
+// Matches text inside quotes
+export const QUOTE_REGEX = /["“”]([^"]*)["“”]/g;
 
 // Wait between requests to caselist api in ms. Seems to be limited to 1500 requests every 15 minutes
 export const REQUEST_WAIT = 1000;

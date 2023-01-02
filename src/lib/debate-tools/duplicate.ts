@@ -1,4 +1,4 @@
-import { EDGE_TOLERANCE, INSIDE_TOLERANCE, SENTENCE_REGEX } from 'app/constants';
+import { EDGE_TOLERANCE, INSIDE_TOLERANCE, QUOTE_REGEX, SENTENCE_REGEX } from 'app/constants';
 import { RedisContext, redis } from 'app/modules/deduplicator/redis';
 import { db } from 'app/lib';
 import { SubBucketEntity } from 'app/modules/deduplicator/SubBucket';
@@ -11,7 +11,8 @@ type MatchInfo = { cardLen: number; min: number; max: number };
 type MatchPair = { a: MatchInfo; b: MatchInfo };
 export const getSentences = (text: string, cutoff = 20): string[] | undefined => {
   return text
-    ?.split(SENTENCE_REGEX)
+    ?.replaceAll(QUOTE_REGEX, '')
+    .split(SENTENCE_REGEX)
     .map((el) => el.replace(/[^A-Z]/gi, '').toLowerCase())
     .filter((el: string) => el.length >= cutoff);
 };
