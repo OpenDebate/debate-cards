@@ -2,42 +2,49 @@ import { DynamicKeyEntity, RedisContext, Repository } from './redis';
 import { CardSet, SubBucketEntity } from './SubBucket';
 import { SHOULD_MERGE } from 'app/constants';
 import { WatchError } from 'redis';
+import { filter } from 'lodash';
 
-// shouldMerge and mergeCardSet are optimized for performance
-export function mergeCardSets(subBuckets: readonly CardSet[]): CardSet {
-  if (subBuckets.length === 1) return subBuckets[0];
-  const matching = new Map<number, number>();
-  const members = new Set<number>();
-  for (const subBucket of subBuckets) {
-    for (const [cardId, count] of subBucket.matching) matching.set(cardId, (matching.get(cardId) ?? 0) + count);
-    for (const member of subBucket.members) members.add(member);
+/** Fastest when largest cardSet is first */
+export function mergeCardSets(cardSets: readonly CardSet[]): CardSet {
+  const matching = new Map(cardSets[0].matching);
+  const members = new Set(cardSets[0].members);
+  for (const carSet of cardSets.slice(1)) {
+    for (const [cardId, count] of carSet.matching) matching.set(cardId, (matching.get(cardId) ?? 0) + count);
+    for (const member of carSet.members) members.add(member);
   }
 
   return { size: members.size, members, matching };
 }
 
-export function shouldMerge(a: readonly CardSet[], b: readonly CardSet[]): boolean {
-  const cardSets = a.concat(b);
-  const totalCardSet = mergeCardSets(cardSets);
-  return cardSets.every((cardSet) => {
-    const otherSetsSize = totalCardSet.size - cardSet.size;
+function checkAdd(a: CardSet, b: CardSet) {
+  const matches = Array.from(a.members).filter((member) => SHOULD_MERGE(b.matching.get(member), b.size));
+  return SHOULD_MERGE(matches.length, a.size);
+}
+/** Faster when small is smaller and large is larger */
+function shouldMerge(small: CardSet, large: CardSet) {
+  return checkAdd(small, large) || checkAdd(large, small);
+}
 
-    // Have to try merging in both directions
-    let aMergeCount = 0;
-    // Try quicker direction first
-    for (const member of cardSet.members) {
-      // A CardSet wont affect the totalMatching count for its members
-      if (SHOULD_MERGE(totalCardSet.matching.get(member), otherSetsSize)) aMergeCount++;
-    }
-    if (SHOULD_MERGE(aMergeCount, cardSet.size)) return true;
+/**
+ * Check if it is possible to build BucketSet one bucket at a time starting from a given cardSet.
+ */
+function tryBuild(included: CardSet, excluded: readonly CardSet[]) {
+  // Does a depth first search, adding one bucket to the included set at a time
 
-    let bMergeCount = 0;
-    for (const member of totalCardSet.members) {
-      // Match count will be zero for members of cardSet
-      if (SHOULD_MERGE(cardSet.matching.get(member), cardSet.size)) bMergeCount++;
-    }
-    return SHOULD_MERGE(bMergeCount, otherSetsSize);
-  });
+  // When only one excluded bucket, if it can be added were done
+  if (excluded.length === 1) return shouldMerge(included, excluded[0]);
+
+  const canidates = excluded.filter((cardSet) => shouldMerge(cardSet, included));
+  for (const canidate of canidates) {
+    if (
+      tryBuild(
+        mergeCardSets([included, canidate]),
+        filter(excluded, (bucket) => bucket !== canidate),
+      )
+    )
+      return true;
+  }
+  return false;
 }
 
 export type BucketSetEntity = BucketSet;
@@ -96,27 +103,51 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
 
     const newBucketSet = this.context.bucketSetRepository.create(subBucket.key, [subBucket.key]);
     subBucket.bucketSetId = newBucketSet.key;
-
-    await subBucket.resolveUpdates([...subBucket.matching.keys()]);
   }
 
-  async resolve(): Promise<void> {
-    if (this._subBucketIds.size <= 1) return;
+  async shouldMerge(other: BucketSet): Promise<boolean> {
+    const thisSubBuckets = await this.getSubBuckets();
+    const otherSubBuckets = await other.getSubBuckets();
+    // Technically, a path could exist that this misses, but it is unlikely and very expensive to check
+    return (
+      tryBuild(mergeCardSets(thisSubBuckets), otherSubBuckets) &&
+      tryBuild(mergeCardSets(otherSubBuckets), thisSubBuckets)
+    );
+  }
+
+  async getRemove(): Promise<SubBucketEntity | null> {
+    // Checks if BucketSet could be rebuilt starting from any SubBucket.
+    // Number of SubBuckets should stay small, so check can be complex
+    // SubBucket with least direct matches that could not be used to rebuild, or null if every subBucket worked
+
     const subBuckets = await this.getSubBuckets();
-    for (const subBucket of subBuckets) {
-      // Check if bucket would still get added if you tried now
-      if (
-        !shouldMerge(
-          subBuckets.filter((b) => b !== subBucket),
-          [subBucket],
-        )
-      ) {
-        await this.removeSubBucket(subBucket);
-        // Make sure this wasnt merged into something else
-        if ((await this.context.bucketSetRepository.get(this.key)) !== this) return;
-        else return this.resolve();
-      }
+    const directMatchList = subBuckets.map((a) => subBuckets.filter((b) => shouldMerge(a, b)));
+    // Check the buckets with the least direct matches first
+    // They are the most likley to fail and are what we want to return
+    const sortedBuckets = subBuckets
+      .map((subBucket, i) => ({ subBucket, matchList: directMatchList[i] }))
+      .sort((a, b) => a.matchList.length - b.matchList.length);
+    for (const { subBucket, matchList } of sortedBuckets) {
+      // If a subBucket matches everything, it can just be added to the start of of an existing path
+      // If everything matches everything, paths exist anyway
+      // Works since shouldMerge(a, c) && shouldMerge(b, c) implies shouldMerge(a+b, c)
+      if (matchList.length === subBuckets.length - 1) continue;
+
+      const excluded = subBuckets.filter((b) => b !== subBucket);
+      if (!tryBuild(subBucket, excluded)) return subBucket;
     }
+
+    return null;
+  }
+
+  async resolve(hasBeenRemove = false): Promise<boolean> {
+    if (this._subBucketIds.size <= 1) return hasBeenRemove;
+    const removeBucket = await this.getRemove();
+    if (!removeBucket) return hasBeenRemove;
+    await this.removeSubBucket(removeBucket);
+    await this.resolve(true);
+
+    await removeBucket.resolveUpdates([...removeBucket.matching.keys()]);
   }
 
   toRedis() {

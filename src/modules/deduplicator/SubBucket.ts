@@ -1,8 +1,7 @@
 import { intersection } from 'lodash';
 import { getMatching } from 'app/lib/debate-tools/duplicate';
 import { DynamicKeyEntity, RedisContext, Repository } from './redis';
-import { mergeCardSets, shouldMerge } from './BucketSet';
-import { SHOULD_MATCH, SHOULD_MERGE } from 'app/constants';
+import { SHOULD_MATCH } from 'app/constants';
 import { onAddEvidence } from 'app/actions/addEvidence';
 import { db } from 'app/lib';
 
@@ -121,7 +120,7 @@ class SubBucket implements DynamicKeyEntity<number>, CardSet {
     return this.propogateKey();
   }
 
-  async resolveUpdates(canidates: readonly number[]) {
+  async resolveUpdates(canidates: readonly number[]): Promise<void> {
     const thisBucketSet = await this.getBucketSet();
     const canidateSubBuckets = (await this.context.cardSubBucketRepository.getMany(canidates))
       .filter((s) => s?.subBucket)
@@ -131,41 +130,33 @@ class SubBucket implements DynamicKeyEntity<number>, CardSet {
       await Promise.all(canidateSubBuckets.map((subBucket) => subBucket.getBucketSet())),
     );
 
-    if (!canidateBucketSets.size) return;
-    const setSubBuckets = await thisBucketSet.getSubBuckets();
     for (const bucketSet of canidateBucketSets) {
-      if (shouldMerge(setSubBuckets, await bucketSet.getSubBuckets())) {
+      if (await thisBucketSet.shouldMerge(bucketSet)) {
         await thisBucketSet.merge(bucketSet);
         return this.resolveUpdates([...this.matching.keys()]); // Anything might match now
       }
     }
   }
 
-  private async resolveRemoves() {
+  private async resolveRemoves(hasBeenRemove = false) {
     for (const [cardId, count] of this.cards) {
       if (!SHOULD_MATCH(count, this.size)) {
         await this.removeCard(cardId);
-        return this.resolveRemoves();
+        return this.resolveRemoves(true);
       }
     }
+    return hasBeenRemove;
   }
 
   async resolve(updates: readonly number[]) {
-    await this.resolveRemoves();
-    await (await this.getBucketSet()).resolve();
+    const cardWasRemoved = await this.resolveRemoves();
+    const bucketWasRemoved = await (await this.getBucketSet()).resolve();
 
-    const thisBucketSet = await this.getBucketSet(); // Might have changed
-    // Filter out things that we can garuntee were already counted as matching
-    const dontMatch = updates
-      .filter((id) => !this.cards.has(id))
-      .filter((subBucketId) => !SHOULD_MERGE(this.matching.get(subBucketId) - 1, Infinity));
-    const { matching: setMatching, size: setSize } = mergeCardSets(await thisBucketSet.getSubBuckets());
-    // If there are updated cards that might not have already matched, check if they didnt match before and do now
-    const newMatches = dontMatch.filter(
-      (id) => SHOULD_MERGE(setMatching.get(id), setSize) && !SHOULD_MERGE(setMatching.get(id) - 1, setSize),
-    );
+    // If something was removed, anything might match now, otherwise must come from a card with a match added
+    const canidates =
+      cardWasRemoved || bucketWasRemoved ? [...this.matching.keys()] : updates.filter((id) => this.matching.has(id));
 
-    await this.resolveUpdates(newMatches);
+    await this.resolveUpdates(canidates);
     await this.propogateKey();
   }
 
