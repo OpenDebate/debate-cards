@@ -7,7 +7,7 @@ import { onAddEvidence } from './addEvidence';
 export default async ({ gid }: { gid: string }): Promise<any> => {
   try {
     const { id, fulltext } = await db.evidence.findUnique({ where: { gid }, select: { id: true, fulltext: true } });
-    const sentences = getSentences(fulltext) ?? [];
+    const sentences = getSentences(fulltext);
     const { deletes, updates } = await dedup(id, sentences);
 
     return await db.$transaction([

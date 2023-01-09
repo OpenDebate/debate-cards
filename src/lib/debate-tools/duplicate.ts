@@ -1,4 +1,4 @@
-import { EDGE_TOLERANCE, INSIDE_TOLERANCE, QUOTE_REGEX, SENTENCE_REGEX } from 'app/constants';
+import { EDGE_TOLERANCE, INSIDE_TOLERANCE, SENTENCE_REGEX } from 'app/constants';
 import { RedisContext, redis } from 'app/modules/deduplicator/redis';
 import { db } from 'app/lib';
 import { SubBucketEntity } from 'app/modules/deduplicator/SubBucket';
@@ -9,12 +9,18 @@ export type SentenceMatch = { matchId: number; index: number };
 
 type MatchInfo = { cardLen: number; min: number; max: number };
 type MatchPair = { a: MatchInfo; b: MatchInfo };
-export const getSentences = (text: string, cutoff = 20): string[] | undefined => {
+const surroundRegex = (starting: string, ending: string) => new RegExp(`[${starting}]+[^${ending}]*[${ending}]+`, 'g');
+export const getSentences = (text: string, cutoff = 20): string[] => {
+  if (!text) return [];
   return text
-    ?.replaceAll(QUOTE_REGEX, '')
-    .split(SENTENCE_REGEX)
-    .map((el) => el.replace(/[^A-Z]/gi, '').toLowerCase())
-    .filter((el: string) => el.length >= cutoff);
+    .replaceAll('¶', '\n')
+    .replaceAll(/(\w+['‘’]\w+)|(\w+s['‘’]\s)/g, (match) => match.replaceAll(/['‘’]/g, '')) // Remove ' from contractions and words ending in s'
+    .replaceAll(surroundRegex(`"“`, `"”`), (match) => (/[.!?]/g.test(match) ? '. ' : match)) // Remove multiple sentence double quoted text
+    .replaceAll(surroundRegex(`'‘`, `'’`), (match) => (/[.!?]/g.test(match) ? '. ' : match)) // Remove multiple sentence single quoted text
+    .replaceAll(/\(+[^)]*\)+/g, '') // Remove text inside parentheses
+    .split(SENTENCE_REGEX) // Split by sentence
+    .map((el) => el.replace(/[^A-Z]/gi, '').toLowerCase()) // Remove non letter characters
+    .filter((el: string) => el.length >= cutoff); // Filter tiny sentences
 };
 
 const checkMatch = (
