@@ -15,7 +15,8 @@ export const SHOULD_MATCH = (matching: number, total: number): boolean => matchi
 
 // Whether BucketSets which `matching` out of `total` cards should be merged
 // Also whether a card should be considered as a match for the purposes of merging
-export const SHOULD_MERGE = (matching: number, total: number): boolean => matching > 5 || matching / total >= 0.2;
+export const SHOULD_MERGE = (matching: number, total: number): boolean =>
+  matching > 5 ? matching / total >= 0.02 : matching / total >= 0.2;
 
 /* 
   Regex used to split text into sentences 
