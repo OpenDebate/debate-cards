@@ -14,6 +14,7 @@ export const getSentences = (text: string, cutoff = 20): string[] => {
   if (!text) return [];
   return text
     .replaceAll('¶', '\n')
+    .replaceAll(/([A-Z]\.)+/g, (match) => match.replaceAll('.', '')) // Remove acronyms like A.B.C.
     .replaceAll(/(\w+['‘’]\w+)|(\w+s['‘’]\s)/g, (match) => match.replaceAll(/['‘’]/g, '')) // Remove ' from contractions and words ending in s'
     .replaceAll(surroundRegex(`"“`, `"”`), (match) => (/[.!?]/g.test(match) ? '. ' : match)) // Remove multiple sentence double quoted text
     .replaceAll(surroundRegex(`'‘`, `'’`), (match) => (/[.!?]/g.test(match) ? '. ' : match)) // Remove multiple sentence single quoted text
