@@ -4,6 +4,8 @@ export const CONCURRENT_PARSERS = 10;
 // Values above number of cpu threads may run into issues with postgres connections
 export const CONCURRENT_DEDUPLICATION = 10;
 
+// Absolute minimum fraction of matching sentences to consider a card a match
+export const MIN_COUNT_FRACTION = 0.1;
 /* Allow small differences in matching cards to help with things like part of the cite being attached to the start of the card 
    If a card has (numberOfSentences * EDGE_TOLERANCE) different sentences at start or end, will be treated as if they matched all the way to the start or end */
 export const EDGE_TOLERANCE = 0.1;
