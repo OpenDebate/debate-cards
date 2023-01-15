@@ -4,11 +4,9 @@ export const CONCURRENT_PARSERS = 10;
 // Values above number of cpu threads may run into issues with postgres connections
 export const CONCURRENT_DEDUPLICATION = 10;
 
-/* Allow small differences in matching cards to help with things like part of the cite being attached to the start of the card */
-// If a card has EDGE_TOLERANCE different sentences at start or end, will be treated as if they matched all the way to the start or end
-export const EDGE_TOLERANCE = 1;
-// If a card has almost an entire card within it, with at most INSIDE_TOLERANCE sentences missing from the start or end, it will be treated as if the entire card matched
-export const INSIDE_TOLERANCE = 2;
+/* Allow small differences in matching cards to help with things like part of the cite being attached to the start of the card 
+   If a card has (numberOfSentences * EDGE_TOLERANCE) different sentences at start or end, will be treated as if they matched all the way to the start or end */
+export const EDGE_TOLERANCE = 0.1;
 
 // Whether a card card that matches `matching` out of `total` cards in a SubBucket should be added to it
 export const SHOULD_MATCH = (matching: number, total: number): boolean => matching / total > 0.5;

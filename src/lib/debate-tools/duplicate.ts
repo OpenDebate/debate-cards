@@ -1,4 +1,4 @@
-import { EDGE_TOLERANCE, INSIDE_TOLERANCE, SENTENCE_REGEX } from 'app/constants';
+import { EDGE_TOLERANCE, SENTENCE_REGEX } from 'app/constants';
 import { RedisContext, redis } from 'app/modules/deduplicator/redis';
 import { db } from 'app/lib';
 import { SubBucketEntity } from 'app/modules/deduplicator/SubBucket';
@@ -23,15 +23,17 @@ export const getSentences = (text: string, cutoff = 20): string[] => {
     .filter((el: string) => el.length >= cutoff); // Filter tiny sentences
 };
 
-const checkMatch = (
-  { cardLen: aLen, min: aMin, max: aMax }: MatchInfo,
-  { cardLen: bLen, min: bMin, max: bMax }: MatchInfo,
-) => {
-  const insideMatch = aLen > 3 && aLen - (aMax + 1 - aMin) <= INSIDE_TOLERANCE; // If the enterity of A matches
-  return insideMatch || (aMin <= EDGE_TOLERANCE && bLen - bMax <= EDGE_TOLERANCE); // If matches the start of A and the end of B
+const isMatch = ({
+  a: { cardLen: aLen, min: aMin, max: aMax },
+  b: { cardLen: bLen, min: bMin, max: bMax },
+}: MatchPair) => {
+  // Allow a percentage of non-matches at the edges to account for bad ocr and small parsing errors
+  const aTolerance = Math.ceil(aLen * EDGE_TOLERANCE);
+  const bTolerance = Math.ceil(bLen * EDGE_TOLERANCE);
+  // Must match until the start of one card and to the end of one card
+  // Can be the same (one card is inside the other) or different cards (end of one card overlaps with start of the other)
+  return (aMin <= aTolerance || bMin <= bTolerance) && (aLen - 1 - aMax <= aTolerance || bLen - 1 - bMax <= bTolerance);
 };
-// // Check in both orders
-const isMatch = (info: MatchPair) => checkMatch(info.a, info.b) || checkMatch(info.b, info.a);
 
 export async function getMatching(
   context: RedisContext,
@@ -49,35 +51,31 @@ export async function getMatching(
   */
   const sentenceEntities = await context.sentenceRepository.getMany(sentences);
   const canidateIds = uniq(sentenceEntities.flatMap((entity) => entity.matches).map((match) => match.matchId));
-  const cardLens = (await context.cardLengthRepository.getMany(canidateIds)).reduce<Record<number, number>>(
-    (prev, current, i) => {
-      prev[canidateIds[i]] = current.length;
-      return prev;
-    },
-    {},
+  const cardLens = (await context.cardLengthRepository.getMany(canidateIds)).reduce<Map<number, number>>(
+    (lengths, current) => lengths.set(current.key, current.length),
+    new Map(),
   );
 
-  const matchInfo: Record<string, MatchPair> = {};
+  const matchInfo = new Map<number, MatchPair>();
   for (let aIndex = 0; aIndex < sentenceEntities.length; aIndex++) {
     const matches = sentenceEntities[aIndex].matches;
     for (const { matchId, index: bIndex } of matches) {
       if (matchId === cardId) continue;
-      if (!(matchId in matchInfo))
-        matchInfo[matchId] = {
+      if (!matchInfo.has(matchId))
+        matchInfo.set(matchId, {
           a: { cardLen: sentenceEntities.length, min: aIndex, max: aIndex },
-          b: { cardLen: cardLens[matchId], min: bIndex, max: bIndex },
-        };
+          b: { cardLen: cardLens.get(matchId), min: bIndex, max: bIndex },
+        });
       else {
-        matchInfo[matchId].a.max = aIndex;
-        matchInfo[matchId].b.max = bIndex;
+        matchInfo.get(matchId).a.max = aIndex;
+        matchInfo.get(matchId).b.max = bIndex;
       }
     }
   }
 
   const matches: number[] = [];
-  for (const id in matchInfo) {
-    if (isMatch(matchInfo[id])) matches.push(+id);
-  }
+  for (const [id, info] of matchInfo) if (isMatch(info)) matches.push(id);
+
   return { matches, existingSentences: canidateIds.includes(cardId) };
 }
 
