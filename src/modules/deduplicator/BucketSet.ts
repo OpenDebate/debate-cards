@@ -51,13 +51,42 @@ class ExploringSet {
     return this.visited.has(this.hash(cardSets));
   }
 }
+class KnownSet {
+  // Map of cards to index
+  private cardSetMap: Map<CardSet, bigint>;
+  private known: Map<bigint, boolean>;
+  constructor(bucketSets: readonly CardSet[]) {
+    this.cardSetMap = new Map();
+    this.known = new Map();
+    bucketSets.forEach((cardSet, index) => this.cardSetMap.set(cardSet, BigInt(index)));
+  }
 
+  private hash(state: readonly CardSet[]) {
+    let number = 0n;
+    for (const cardSet of state) {
+      number |= 1n << this.cardSetMap.get(cardSet);
+    }
+    return number;
+  }
+
+  set(cardSets: readonly CardSet[], value: boolean) {
+    this.known.set(this.hash(cardSets), value);
+  }
+
+  has(cardSets: readonly CardSet[]) {
+    return this.known.has(this.hash(cardSets));
+  }
+  get(cardSets: readonly CardSet[]) {
+    return this.known.get(this.hash(cardSets));
+  }
+}
 /**
  * Check if it is possible to build BucketSet one bucket at a time starting from a given cardSet.
  * Does a depth first search, adding one bucket to the included set at a time
  */
-function tryBuild(included: CardSet, excluded: readonly CardSet[], visited: ExploringSet) {
+function tryBuild(included: CardSet, excluded: readonly CardSet[], visited: ExploringSet, known: KnownSet) {
   visited.add(excluded);
+  if (known.has(excluded)) return known.get(excluded);
   // When only excluded bucket, if it can be added were done
   if (excluded.length === 1) return shouldMerge(included, excluded[0]);
 
@@ -68,8 +97,12 @@ function tryBuild(included: CardSet, excluded: readonly CardSet[], visited: Expl
   for (const canidate of canidates) {
     const rest = filter(excluded, (bucket) => bucket !== canidate);
     if (visited.has(rest)) continue;
-    if (tryBuild(mergeCardSets([included, canidate]), rest, visited)) return true;
+    if (tryBuild(mergeCardSets([included, canidate]), rest, visited, known)) {
+      known.set(excluded, true);
+      return true;
+    }
   }
+  known.set(excluded, false);
   return false;
 }
 
@@ -136,12 +169,14 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
   async shouldMerge(other: BucketSet): Promise<boolean> {
     const thisSubBuckets = await this.getSubBuckets();
     const otherSubBuckets = await other.getSubBuckets();
+    const allSubBuckets = [...thisSubBuckets, ...otherSubBuckets];
     const larger = thisSubBuckets.length > otherSubBuckets.length ? thisSubBuckets : otherSubBuckets;
     const smaller = thisSubBuckets.length > otherSubBuckets.length ? otherSubBuckets : thisSubBuckets;
+    const knownSet = new KnownSet(allSubBuckets);
     // Technically, a path could exist that this misses, but it is unlikely and very expensive to check
     return (
-      tryBuild(mergeCardSets(larger), smaller, new ExploringSet([...thisSubBuckets, ...otherSubBuckets])) &&
-      tryBuild(mergeCardSets(smaller), larger, new ExploringSet([...thisSubBuckets, ...otherSubBuckets]))
+      tryBuild(mergeCardSets(larger), smaller, new ExploringSet(allSubBuckets), knownSet) &&
+      tryBuild(mergeCardSets(smaller), larger, new ExploringSet(allSubBuckets), knownSet)
     );
   }
 
@@ -156,6 +191,7 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
     const sortedBuckets = subBuckets
       .map((subBucket, i) => ({ subBucket, matchList: directMatchList[i] }))
       .sort((a, b) => a.matchList.length - b.matchList.length);
+    const knownSet = new KnownSet(subBuckets);
     for (const { subBucket, matchList } of sortedBuckets) {
       // If a subBucket matches everything, it can just be added to the start of of an existing path
       // If everything matches everything, paths exist anyway
@@ -163,7 +199,7 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
       if (matchList.length === subBuckets.length - 1) continue;
 
       const excluded = subBuckets.filter((b) => b !== subBucket);
-      if (!tryBuild(subBucket, excluded, new ExploringSet(subBuckets))) return subBucket;
+      if (!tryBuild(subBucket, excluded, new ExploringSet(subBuckets), knownSet)) return subBucket;
     }
 
     return null;
