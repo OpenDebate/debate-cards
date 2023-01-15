@@ -136,7 +136,8 @@ export class RedisContext {
         cardIds: (await bucketSet.getSubBuckets()).flatMap((bucket) => bucket?.members),
       })),
     );
-    const deletes = [...this.bucketSetRepository.deletions];
+    const updateIds = updates.map((update) => update.bucketId);
+    const deletes = [...this.bucketSetRepository.deletions].filter((id) => !updateIds.includes(id));
 
     await this.subBucketRepository.saveAll();
     await this.cardLengthRepository.saveAll();

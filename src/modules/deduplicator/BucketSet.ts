@@ -34,6 +34,9 @@ function tryBuild(included: CardSet, excluded: readonly CardSet[]) {
   // When only one excluded bucket, if it can be added were done
   if (excluded.length === 1) return shouldMerge(included, excluded[0]);
 
+  // If there is a bucket that dosent match even if everything it matches is included, this path cant work
+  if (excluded.find((cardSet) => !SHOULD_MERGE(cardSet.matching.size, included.size))) return false;
+
   const canidates = excluded.filter((cardSet) => shouldMerge(cardSet, included));
   for (const canidate of canidates) {
     if (
@@ -110,11 +113,10 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
   async shouldMerge(other: BucketSet): Promise<boolean> {
     const thisSubBuckets = await this.getSubBuckets();
     const otherSubBuckets = await other.getSubBuckets();
+    const larger = thisSubBuckets.length > otherSubBuckets.length ? thisSubBuckets : otherSubBuckets;
+    const smaller = thisSubBuckets.length > otherSubBuckets.length ? otherSubBuckets : thisSubBuckets;
     // Technically, a path could exist that this misses, but it is unlikely and very expensive to check
-    return (
-      tryBuild(mergeCardSets(thisSubBuckets), otherSubBuckets) &&
-      tryBuild(mergeCardSets(otherSubBuckets), thisSubBuckets)
-    );
+    return tryBuild(mergeCardSets(larger), smaller) && tryBuild(mergeCardSets(smaller), larger);
   }
 
   async getRemove(): Promise<SubBucketEntity | null> {
