@@ -106,6 +106,7 @@ class SubBucket implements DynamicKeyEntity<number>, CardSet {
   async removeCard(id: number) {
     this.updated = true;
     this._cards.delete(id);
+    console.debug(`Removing ${id} from SubBucket ${this.key}=>${this.createKey()}`);
     await this.context.cardSubBucketRepository.reset(id);
     for (const match of (await getMatching(this.context, id)).matches) {
       const counter = this.cards.has(match) ? this._cards : this._matching;

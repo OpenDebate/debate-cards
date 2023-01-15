@@ -84,6 +84,7 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
 
     this.context.bucketSetRepository.delete(bucketSet.key);
     this._subBucketIds = new Set([...this._subBucketIds, ...bucketSet.subBucketIds]);
+    console.debug(this.context.txId, `Merging ${bucketSet.key} into ${this.key}=>${this.createKey()}`);
 
     (await this.getSubBuckets()).forEach((subBucket) => (subBucket.bucketSetId = this.key));
     return this.propogateKey();
@@ -99,6 +100,7 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
   async removeSubBucket(subBucket: SubBucketEntity) {
     this.updated = true;
     this._subBucketIds.delete(subBucket.key);
+    console.debug(this.context.txId, `Removing ${subBucket.key} from BucketSet ${this.key}=>${this.createKey()}`);
     await this.propogateKey();
 
     const newBucketSet = this.context.bucketSetRepository.create(subBucket.key, [subBucket.key]);

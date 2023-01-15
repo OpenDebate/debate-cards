@@ -101,6 +101,7 @@ import { CardLengthRepository } from './CardLength';
 import { BucketSetRepository } from './BucketSet';
 import { Updates } from 'app/lib/debate-tools/duplicate';
 
+let i = 0;
 export class RedisContext {
   transaction: RedisTransaction;
   sentenceRepository: SentenceRepository;
@@ -108,6 +109,7 @@ export class RedisContext {
   cardSubBucketRepository: CardSubBucketRepository;
   subBucketRepository: SubBucketRepository;
   bucketSetRepository: BucketSetRepository;
+  txId: number; // For logging/debugging
 
   constructor(public client: RedisType) {
     this.transaction = client.multi();
@@ -116,6 +118,7 @@ export class RedisContext {
     this.cardSubBucketRepository = new CardSubBucketRepository(this);
     this.subBucketRepository = new SubBucketRepository(this);
     this.bucketSetRepository = new BucketSetRepository(this);
+    this.txId = i++;
   }
 
   async finish(): Promise<Updates> {
