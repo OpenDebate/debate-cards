@@ -1,5 +1,5 @@
-import { DynamicKeyEntity, RedisContext, Repository } from './redis';
-import { CardSet, SubBucketEntity } from './SubBucket';
+import { DynamicKeyEntity, EntityManager, RedisContext } from './redis';
+import { CardSet, SubBucket } from './SubBucket';
 import { SHOULD_MERGE } from 'app/constants';
 import { WatchError } from 'redis';
 import { filter } from 'lodash';
@@ -110,7 +110,7 @@ export type BucketSetEntity = BucketSet;
 class BucketSet implements DynamicKeyEntity<number, string[]> {
   private _subBucketIds: Set<number>;
   public key: number;
-  constructor(public context: RedisContext, subBucketIds: number[], public updated: boolean = false) {
+  constructor(public readonly context: RedisContext, subBucketIds: number[], public updated: boolean = false) {
     this._subBucketIds = new Set(subBucketIds);
     this.key = this.createKey();
   }
@@ -132,7 +132,7 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
     return [...this._subBucketIds];
   }
 
-  async getSubBuckets(): Promise<readonly SubBucketEntity[]> {
+  async getSubBuckets(): Promise<readonly SubBucket[]> {
     return this.context.subBucketRepository.getMany(this.subBucketIds);
   }
 
@@ -156,7 +156,7 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
     return this.propogateKey();
   }
 
-  async removeSubBucket(subBucket: SubBucketEntity) {
+  async removeSubBucket(subBucket: SubBucket) {
     this.updated = true;
     this._subBucketIds.delete(subBucket.key);
     console.debug(this.context.txId, `Removing ${subBucket.key} from BucketSet ${this.key}=>${this.createKey()}`);
@@ -180,7 +180,7 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
     );
   }
 
-  async getRemove(): Promise<SubBucketEntity | null> {
+  async getRemove(): Promise<SubBucket | null> {
     // Checks if BucketSet could be rebuilt starting from any SubBucket.
     // SubBucket with least direct matches that could not be used to rebuild, or null if every subBucket worked
 
@@ -219,27 +219,30 @@ class BucketSet implements DynamicKeyEntity<number, string[]> {
     return this.subBucketIds.map(String);
   }
 }
+export type { BucketSet };
 
-export class BucketSetRepository extends Repository<BucketSet, number> {
-  protected prefix = 'BS:';
+export class BucketSetManager implements EntityManager<BucketSet, number> {
+  public readonly prefix = 'BS:';
+  constructor(public readonly context: RedisContext) {}
 
-  async fromRedis({ subBucketIds }: { subBucketIds: number[] }): Promise<BucketSet> {
+  async loadKeys(prefixedKeys: string[], rawKeys: string[]): Promise<string[][]> {
+    this.context.client.watch(prefixedKeys);
+    return Promise.all(
+      prefixedKeys.map(async (key, i) => {
+        const members = await this.context.client.sMembers(key);
+        return members.length ? members : [rawKeys[i]];
+      }),
+    );
+  }
+  parse(subBucketIds: string[]): BucketSet {
+    return new BucketSet(this.context, subBucketIds.map(Number), true);
+  }
+  create(_key: number, subBucketIds: number[]): BucketSet {
     return new BucketSet(this.context, subBucketIds, true);
   }
-  createNew(key: number, subBucketIds: number[]): BucketSet {
-    return new BucketSet(this.context, subBucketIds, true);
-  }
-
-  protected async load(key: number): Promise<BucketSet> {
-    await this.context.client.watch(this.prefix + key);
-    const subBuckets = await this.context.client.sMembers(this.prefix + key);
-    if (!subBuckets?.length) return this.fromRedis({ subBucketIds: [key] });
-    return this.fromRedis({ subBucketIds: subBuckets.map(Number) });
-  }
-  async save(e: BucketSet): Promise<unknown> {
-    e.updated = false;
-    this.context.transaction.del(this.prefix + e.key);
-    if (e.subBucketIds.length <= 1) return; // Dont bother saving sigle member bucket sets
-    return this.context.transaction.sAdd(this.prefix + e.key, e.toRedis());
+  save(entity: BucketSet): unknown {
+    this.context.transaction.del(this.prefix + entity.key);
+    if (entity.subBucketIds.length <= 1) return; // Dont bother saving sigle member bucket sets
+    return this.context.transaction.sAdd(this.prefix + entity.key, entity.toRedis());
   }
 }

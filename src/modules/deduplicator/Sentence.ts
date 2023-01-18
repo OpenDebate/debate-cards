@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { commandOptions } from 'redis';
 import { SentenceMatch } from 'app/lib/debate-tools/duplicate';
-import { BaseEntity, RedisContext, Repository } from './redis';
+import { BaseEntity, EntityManager, RedisContext } from './redis';
 
 /*
   Data about sentences is stored inside binary strings
@@ -11,13 +11,13 @@ import { BaseEntity, RedisContext, Repository } from './redis';
 */
 const paddedHex = (num: number, len: number) => num.toString(16).padStart(len, '0');
 class Sentence implements BaseEntity<string, string> {
-  public key: string;
-  public subKey: string;
+  public readonly key: string;
+  public readonly subKey: string;
   private _additions: SentenceMatch[];
   constructor(
-    public context: RedisContext,
-    public sentence: string,
-    private _matches: SentenceMatch[],
+    public readonly context: RedisContext,
+    public readonly sentence: string,
+    private _loadedMatches: SentenceMatch[],
     public updated: boolean = false,
   ) {
     const { bucket, subKey } = Sentence.createKey(sentence);
@@ -29,12 +29,12 @@ class Sentence implements BaseEntity<string, string> {
   static createKey(sentence: string) {
     const hash = createHash('md5').update(sentence).digest('hex');
     // Uses top 20 bits as bucket, and next 40 as key
-    // Will create 65k buckets, each containing a thousand or so sentences with the full dataset.
+    // Will create around 1 million buckets, each containing 100 or so sentences with the full dataset.
     return { bucket: hash.slice(0, 5), subKey: hash.slice(5, 15) };
   }
 
   get matches(): readonly SentenceMatch[] {
-    return this._matches.concat(this._additions);
+    return this._loadedMatches.concat(this._additions);
   }
 
   get additions(): readonly SentenceMatch[] {
@@ -52,38 +52,34 @@ class Sentence implements BaseEntity<string, string> {
       .join('');
   }
 }
+export type { Sentence };
 
-export class SentenceRepository extends Repository<Sentence, string> {
-  protected prefix = 'S:';
+export class SentenceManager implements EntityManager<Sentence, string> {
+  public readonly prefix = 'S:';
+  constructor(public readonly context: RedisContext) {}
 
-  fromRedis(obj: { data: Buffer }, sentence: string): Sentence {
-    const { data } = obj;
-    if (!data) return new Sentence(this.context, sentence, []);
-    if (data.length % 11 != 0) throw new Error(`Data for bucket ${sentence} has invalid length of ${data.length}`);
+  async loadKeys(_: string[], rawKeys: string[]): Promise<Buffer[]> {
+    const prefixedKeys = rawKeys.map((sentence) => this.prefix + Sentence.createKey(sentence).bucket);
+    this.context.client.watch(prefixedKeys);
+    const responses = await this.context.client.mGet(commandOptions({ returnBuffers: true }), prefixedKeys);
+    return responses.map((buf) => buf ?? Buffer.from([]));
+  }
+  parse(loadedValue: Buffer, sentence: string): Sentence {
+    if (loadedValue.length % 11 != 0)
+      throw new Error(`Data for bucket ${sentence} has invalid length of ${loadedValue.length}`);
 
-    const { subKey } = Sentence.createKey(sentence);
+    const subKey = parseInt(Sentence.createKey(sentence).subKey, 16);
     const matches: SentenceMatch[] = [];
-    for (let i = 0; i < data.length; i += 11) {
-      if (data.readUIntBE(i, 5) != parseInt(subKey, 16)) continue;
-      matches.push({ matchId: data.readUIntBE(i + 5, 4), index: data.readUIntBE(i + 9, 2) });
+    for (let i = 0; i < loadedValue.length; i += 11) {
+      if (loadedValue.readUIntBE(i, 5) != subKey) continue;
+      matches.push({ matchId: loadedValue.readUIntBE(i + 5, 4), index: loadedValue.readUIntBE(i + 9, 2) });
     }
     return new Sentence(this.context, sentence, matches);
   }
-  createNew(sentence: string, matches: SentenceMatch[]): Sentence {
-    return new Sentence(this.context, sentence, matches, true);
+  create(sentence: string, matches: SentenceMatch[]): Sentence {
+    return new Sentence(this.context, sentence, matches);
   }
-
-  protected async load(sentence: string): Promise<Sentence> {
-    const { bucket } = Sentence.createKey(sentence);
-    this.context.client.watch(this.prefix + bucket);
-    const data = await this.context.client.get(commandOptions({ returnBuffers: true }), this.prefix + bucket);
-
-    const entity = data ? this.fromRedis({ data }, sentence) : new Sentence(this.context, sentence, []);
-    this.cache[sentence] = entity;
-    return entity;
-  }
-  public async save(e: Sentence): Promise<unknown> {
-    e.updated = false;
-    return this.context.transaction.append(this.prefix + e.key, Buffer.from(e.toRedis(), 'hex'));
+  save(entity: Sentence): unknown {
+    return this.context.transaction.append(this.prefix + entity.key, Buffer.from(entity.toRedis(), 'hex'));
   }
 }

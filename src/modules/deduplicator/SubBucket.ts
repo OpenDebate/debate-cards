@@ -1,6 +1,6 @@
 import { intersection } from 'lodash';
 import { getMatching } from 'app/lib/debate-tools/duplicate';
-import { DynamicKeyEntity, RedisContext, Repository } from './redis';
+import { DynamicKeyEntity, EntityManager, RedisContext } from './redis';
 import { SHOULD_MATCH } from 'app/constants';
 import { onAddEvidence } from 'app/actions/addEvidence';
 import { db } from 'app/lib';
@@ -11,15 +11,12 @@ export interface CardSet {
   matching: ReadonlyMap<number, number>;
 }
 
-export type SubBucketEntity = SubBucket;
-class SubBucket implements DynamicKeyEntity<number>, CardSet {
+class SubBucket implements DynamicKeyEntity<number, Record<string, string>>, CardSet {
   public key: number;
   constructor(
-    public context: RedisContext,
-    // Map of cardIds in bucket to how many cards in the bucket they match
-    private _cards: Map<number, number>,
-    // Same as _cards, but for cards not in the bucket
-    private _matching: Map<number, number>,
+    public readonly context: RedisContext,
+    private readonly _cards: Map<number, number>,
+    private readonly _matching: Map<number, number>,
     private _bucketSetId: number,
     public updated: boolean = false,
   ) {
@@ -53,9 +50,11 @@ class SubBucket implements DynamicKeyEntity<number>, CardSet {
     return this.cards.size;
   }
 
+  /** Map of cardIds in bucket to how many cards in the bucket they match */
   get cards(): ReadonlyMap<number, number> {
     return this._cards;
   }
+  /** Map of cardIds not in bucket to how many cards in the bucket they match */
   get matching(): ReadonlyMap<number, number> {
     return this._matching;
   }
@@ -107,7 +106,8 @@ class SubBucket implements DynamicKeyEntity<number>, CardSet {
     this.updated = true;
     this._cards.delete(id);
     console.debug(`Removing ${id} from SubBucket ${this.key}=>${this.createKey()}`);
-    await this.context.cardSubBucketRepository.reset(id);
+    this.context.cardSubBucketRepository.delete(id);
+
     for (const match of (await getMatching(this.context, id)).matches) {
       const counter = this.cards.has(match) ? this._cards : this._matching;
       if (counter.get(match) <= 1) counter.delete(match);
@@ -168,17 +168,23 @@ class SubBucket implements DynamicKeyEntity<number>, CardSet {
     return obj;
   }
 }
+export type { SubBucket };
 
-export class SubBucketRepository extends Repository<SubBucket, number> {
-  protected prefix = 'SB:';
+export class SubBucketManager implements EntityManager<SubBucket, number> {
+  public readonly prefix = 'SB:';
+  constructor(public readonly context: RedisContext) {}
 
-  fromRedis(obj: Record<string, string>, key: number): SubBucket {
+  loadKeys(prefixedKeys: string[]): Promise<Record<string, string>[]> {
+    this.context.client.watch(prefixedKeys);
+    return Promise.all(prefixedKeys.map((key) => this.context.client.hGetAll(key)));
+  }
+  parse(loadedValue: Record<string, string>, key: number): SubBucket {
     const cards: Map<number, number> = new Map();
     const matches: Map<number, number> = new Map();
     let bucketSetId = key;
-    for (const key in obj) {
+    for (const key in loadedValue) {
       const [type, id] = [key.charAt(0), +key.slice(1)];
-      const value = +obj[key];
+      const value = +loadedValue[key];
       if (type === 'c') cards.set(id, value);
       else if (type === 'm') matches.set(id, value);
       else if (key === 'bs') bucketSetId = value;
@@ -186,16 +192,18 @@ export class SubBucketRepository extends Repository<SubBucket, number> {
     }
     return new SubBucket(this.context, cards, matches, bucketSetId, false);
   }
-  createNew(root: number, matches: number[]): SubBucket {
+  create(root: number, matches: number[]): SubBucket {
     const cards = new Map([[root, 1]]);
     const matchMap = new Map(matches.map((match) => [match, 1]));
     const subBucket = new SubBucket(this.context, cards, matchMap, root, true);
     this.context.cardSubBucketRepository.create(root, subBucket);
     return subBucket;
   }
-
-  save(e: SubBucket): Promise<unknown> {
-    this.context.transaction.del(this.prefix + e.key);
-    return super.save(e);
+  save(entity: SubBucket): unknown {
+    const key = this.prefix + entity.key;
+    this.context.transaction.del(key);
+    return Object.entries(entity.toRedis()).map(
+      ([subKey, value]) => value && this.context.transaction.hSet(key, subKey, value),
+    );
   }
 }

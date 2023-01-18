@@ -1,7 +1,7 @@
 import { EDGE_TOLERANCE, MIN_COUNT_FRACTION, SENTENCE_REGEX } from 'app/constants';
 import { RedisContext, redis } from 'app/modules/deduplicator/redis';
 import { db } from 'app/lib';
-import { SubBucketEntity } from 'app/modules/deduplicator/SubBucket';
+import { SubBucket } from 'app/modules/deduplicator/SubBucket';
 import { WatchError } from 'redis';
 import { maxBy, uniq } from 'lodash';
 
@@ -104,7 +104,7 @@ export type Updates = {
 };
 
 // Does depth first search for all buckets that a card could have affected
-async function getConnectedBuckets(context: RedisContext, visited: Set<SubBucketEntity>): Promise<Updates> {
+async function getConnectedBuckets(context: RedisContext, visited: Set<SubBucket>): Promise<Updates> {
   const visitedCards = new Set([...visited].flatMap((subBucket) => subBucket.members));
   const newMatches = uniq(
     [...visited].flatMap((card) => [...card.matching.keys()]).filter((id) => !visitedCards.has(id)),
@@ -160,7 +160,7 @@ export async function dedup(id: number, sentences: string[]): Promise<Updates> {
         bucketCandidates.forEach((b) => b.setMatches(id, matchedCards));
         const matchedBuckets = bucketCandidates.filter((b) => b.doesBucketMatch(matchedCards));
 
-        let addBucket: SubBucketEntity;
+        let addBucket: SubBucket;
         if (!matchedBuckets.length) {
           addBucket = context.subBucketRepository.create(id, matchedCards);
         } else {

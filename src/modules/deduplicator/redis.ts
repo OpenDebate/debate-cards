@@ -11,113 +11,119 @@ export const redis = createClient({
 export type RedisType = typeof redis;
 export type RedisTransaction = ReturnType<RedisType['multi']>;
 
-export interface BaseEntity<K extends string | number, V = Record<string, string>> {
-  context: RedisContext;
+export interface BaseEntity<K extends string | number, V> {
+  readonly context: RedisContext;
   updated: boolean;
   key: K;
   toRedis(): V;
 }
 
-export interface DynamicKeyEntity<K extends string | number, V = Record<string, string>> extends BaseEntity<K, V> {
+export interface DynamicKeyEntity<K extends string | number, V> extends BaseEntity<K, V> {
   createKey(): K;
   propogateKey(): Promise<unknown>;
 }
 
-export abstract class Repository<E extends BaseEntity<string | number, unknown>, K extends string | number> {
-  protected cache: Map<K, E | Promise<E>>;
-  protected abstract prefix: string;
-  public deletions: Set<K>;
+export interface EntityManager<E extends BaseEntity<string | number, unknown>, K extends string | number> {
+  readonly context: RedisContext;
+  readonly prefix: string;
+  loadKeys(prefixedKeys: string[], rawKeys: string[]): Promise<unknown[]>;
+  parse(loadedValue: unknown, key: K): E | Promise<E>;
+  create(key: K, ...args: any[]): E;
+  save(entity: E): unknown;
+}
 
-  constructor(protected context: RedisContext) {
+export class Repository<E extends BaseEntity<string | number, unknown>, K extends string | number> {
+  private cache: Map<K, E | Promise<E>>;
+  private _deletions: Set<K>;
+
+  constructor(private entityMangaer: EntityManager<E, K>) {
     this.cache = new Map();
-    this.deletions = new Set();
+    this._deletions = new Set();
   }
 
-  protected getKeys(keys: K[]): Promise<Record<string, string>[]> {
-    this.context.client.watch(keys.filter((key) => !this.cache.has(key)).map((key) => this.prefix + key));
-    return Promise.all(keys.map((key) => this.context.client.hGetAll(`${this.prefix}${key}`)));
+  get deletions(): ReadonlySet<K> {
+    return this._deletions;
   }
-  protected async getKey(key: K): Promise<Record<string, string>> {
-    const obj = (await this.getKeys([key]))[0];
-    return isEmpty(obj) ? null : obj;
+
+  public getMany(keys: readonly K[]): Promise<(E | null)[]> {
+    const notInCache = keys.filter((key) => !this.cache.has(key));
+    const prefixedKeys = notInCache.map((key) => this.entityMangaer.prefix + key);
+    if (prefixedKeys.length) {
+      const loadValues = this.entityMangaer.loadKeys(prefixedKeys, notInCache.map(String));
+
+      notInCache.forEach((key, i) =>
+        this.cache.set(
+          key,
+          loadValues.then((result) => {
+            const value = result[i];
+            if (value === null) return null;
+            return this.entityMangaer.parse(value, key);
+          }),
+        ),
+      );
+    }
+    return Promise.all(keys.map((key) => this.cache.get(key)));
   }
-  protected async load(key: K): Promise<E> {
-    const obj = await this.getKey(key);
-    if (isEmpty(obj)) return null;
-    const entity = this.fromRedis(obj, key);
-    if (!entity) return null;
-    this.cache.set(key, entity);
-    return entity;
+  public async get(key: K) {
+    return (await this.getMany([key]))[0];
   }
-  public async get(key: K): Promise<E> | null {
-    // Add to cache right away so concurrent requests get the same object
-    if (!this.cache.has(key)) this.cache.set(key, this.load(key));
-    return this.cache.get(key);
-  }
-  public async getMany(keys: readonly K[]): Promise<(E | null)[]> {
-    return Promise.all(keys.map((key) => this.get(key)));
-  }
+
   public async getUpdated(): Promise<E[]> {
     return (await Promise.all(this.cache.values())).filter((e) => e?.updated);
   }
 
-  abstract fromRedis(obj: Record<string, unknown>, key: K): E | Promise<E>;
-  abstract createNew(key: K, ...args: any[]): E;
   public create(key: K, ...args: any[]): E {
-    this.context.client.watch(this.prefix + key);
-    const entity = this.createNew(key, ...args);
+    this.entityMangaer.context.client.watch(this.entityMangaer.prefix + key);
+    const entity = this.entityMangaer.create(key, ...args);
     this.cache.set(key, entity);
     return entity;
   }
 
+  public delete(key: K): void {
+    this.cache.set(key, null);
+    this._deletions.add(key);
+  }
   public renameCacheKey(oldKey: K, newKey: K): void {
     this.cache.set(newKey, this.cache.get(oldKey));
     this.delete(oldKey);
   }
-  public delete(key: K): void {
-    this.cache.set(key, null);
-    this.deletions.add(key);
-  }
 
-  public async save(e: E): Promise<unknown> {
+  public save(e: E): unknown {
     e.updated = false;
-    const key = e.key.toString();
-    return Object.entries(await e.toRedis()).map(
-      ([subKey, value]) => value && this.context.transaction.hSet(`${this.prefix}${key}`, subKey, value),
-    );
+    return this.entityMangaer.save(e);
   }
   public async saveAll(): Promise<unknown> {
     const updated = await this.getUpdated();
-    for (const key of this.deletions) this.context.transaction.del(this.prefix + key);
-    this.deletions = new Set();
-    return Promise.all(updated.map((entity) => this.save(entity)));
+    for (const key of this._deletions) this.entityMangaer.context.transaction.del(this.entityMangaer.prefix + key);
+    this._deletions = new Set();
+    return updated.map((entity) => this.save(entity));
   }
 }
 
-import { SubBucketRepository } from './SubBucket';
-import { CardSubBucketRepository } from './CardSubBucket';
-import { SentenceRepository } from './Sentence';
-import { CardLengthRepository } from './CardLength';
-import { BucketSetRepository } from './BucketSet';
+import { Sentence, SentenceManager } from './Sentence';
+import { SubBucket, SubBucketManager } from './SubBucket';
+import { CardSubBucket, CardSubBucketManager } from './CardSubBucket';
+import { CardLength, CardLengthManager } from './CardLength';
+import { BucketSet, BucketSetManager } from './BucketSet';
 import { Updates } from 'app/lib/debate-tools/duplicate';
 
 let i = 0;
 export class RedisContext {
   transaction: RedisTransaction;
-  sentenceRepository: SentenceRepository;
-  cardLengthRepository: CardLengthRepository;
-  cardSubBucketRepository: CardSubBucketRepository;
-  subBucketRepository: SubBucketRepository;
-  bucketSetRepository: BucketSetRepository;
+  sentenceRepository: Repository<Sentence, string>;
+  cardLengthRepository: Repository<CardLength, number>;
+  cardSubBucketRepository: Repository<CardSubBucket, number>;
+  subBucketRepository: Repository<SubBucket, number>;
+  bucketSetRepository: Repository<BucketSet, number>;
   txId: number; // For logging/debugging
 
   constructor(public client: RedisType) {
     this.transaction = client.multi();
-    this.sentenceRepository = new SentenceRepository(this);
-    this.cardLengthRepository = new CardLengthRepository(this);
-    this.cardSubBucketRepository = new CardSubBucketRepository(this);
-    this.subBucketRepository = new SubBucketRepository(this);
-    this.bucketSetRepository = new BucketSetRepository(this);
+    this.sentenceRepository = new Repository(new SentenceManager(this));
+    this.cardLengthRepository = new Repository(new CardLengthManager(this));
+    this.cardSubBucketRepository = new Repository(new CardSubBucketManager(this));
+    this.subBucketRepository = new Repository(new SubBucketManager(this));
+    this.bucketSetRepository = new Repository(new BucketSetManager(this));
     this.txId = i++;
   }
 
