@@ -104,7 +104,9 @@ export type Updates = {
 };
 
 // Does depth first search for all buckets that a card could have affected
-async function getConnectedBuckets(context: RedisContext, visited: Set<SubBucket>): Promise<Updates> {
+async function getConnectedBuckets(context: RedisContext, visited: Set<SubBucket>, depth: number): Promise<Updates> {
+  if (depth > 3) return;
+
   const visitedCards = new Set([...visited].flatMap((subBucket) => subBucket.members));
   const newMatches = uniq(
     [...visited].flatMap((card) => [...card.matching.keys()]).filter((id) => !visitedCards.has(id)),
@@ -132,7 +134,7 @@ async function getConnectedBuckets(context: RedisContext, visited: Set<SubBucket
         for (const subBucket of await bucketSet.getSubBuckets()) visited.add(subBucket);
       }),
     );
-    return getConnectedBuckets(context, visited);
+    return getConnectedBuckets(context, visited, depth + 1);
   }
 }
 
@@ -149,7 +151,7 @@ export async function dedup(id: number, sentences: string[]): Promise<Updates> {
         if (cardSubBucket) {
           console.log(context.txId, `Reprocessing ${id}`);
           const subBuckets = new Set(await (await cardSubBucket.getBucketSet()).getSubBuckets());
-          return await getConnectedBuckets(context, subBuckets); // await here for error handling
+          return await getConnectedBuckets(context, subBuckets, 1); // await here for error handling
         }
 
         context.cardLengthRepository.create(id, sentences.length);
