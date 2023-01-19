@@ -5,7 +5,7 @@ import addSchool, { onTeamLoaded } from 'app/actions/addSchool';
 import addTeam, { onOpensourceLoaded } from 'app/actions/addTeam';
 import { Caselist, ModelFile } from 'app/constants/caselist/api';
 import { ActionQueue, db } from 'app/lib';
-import { caselistApi, openSourceTags } from 'app/lib/caselist';
+import { priorityCaselistApi, openSourceTags } from 'app/lib/caselist';
 
 type CaselistLoadOptions = { archived: boolean; active: boolean; years?: number[]; names?: string[] };
 // Concurrency doesn't really matter since api is ratelimited
@@ -17,7 +17,7 @@ export default {
     for (let year = 2022; year >= 2013; year--) defaultYears.push(year);
 
     for (const year of years ?? defaultYears) {
-      files.push(...(await caselistApi.getFiles(year)).body);
+      files.push(...(await priorityCaselistApi.getFiles(year)).body);
     }
     return files;
   }),
@@ -28,8 +28,8 @@ export default {
     null,
     async ({ archived, active, years, names }: CaselistLoadOptions) => {
       let tasks: Caselist[] = [];
-      if (archived || years || names) tasks = tasks.concat((await caselistApi.getCaselists(true)).body);
-      if (active || years || names) tasks = tasks.concat((await caselistApi.getCaselists(false)).body);
+      if (archived || years || names) tasks = tasks.concat((await priorityCaselistApi.getCaselists(true)).body);
+      if (active || years || names) tasks = tasks.concat((await priorityCaselistApi.getCaselists(false)).body);
       if (years || names) tasks = tasks.filter((c) => years?.includes(c.year) || names?.includes(c.name));
       return tasks.sort((a, b) => b.year - a.year); // Do more recent years first
     },
@@ -42,8 +42,8 @@ export default {
     async ({ caselist, school }: { caselist: string; school: string }) => {
       return [
         {
-          caselist: (await caselistApi.getCaselist(caselist)).body,
-          school: (await caselistApi.getSchool(caselist, school)).body,
+          caselist: (await priorityCaselistApi.getCaselist(caselist)).body,
+          school: (await priorityCaselistApi.getSchool(caselist, school)).body,
         },
       ];
     },
@@ -56,9 +56,9 @@ export default {
     async ({ caselist, school, team }: { caselist: string; school: string; team: string }) => {
       return [
         {
-          caselist: (await caselistApi.getCaselist(caselist)).body,
-          school: (await caselistApi.getSchool(caselist, school)).body,
-          team: (await caselistApi.getTeam(caselist, school, team)).body,
+          caselist: (await priorityCaselistApi.getCaselist(caselist)).body,
+          school: (await priorityCaselistApi.getSchool(caselist, school)).body,
+          team: (await priorityCaselistApi.getTeam(caselist, school, team)).body,
         },
       ];
     },

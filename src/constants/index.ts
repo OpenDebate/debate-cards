@@ -2,7 +2,7 @@
 export const CONCURRENT_PARSERS = 10;
 // Max number of cards being deduplicated concurrently
 // Values above number of cpu threads may run into issues with postgres connections
-export const CONCURRENT_DEDUPLICATION = 10;
+export const CONCURRENT_DEDUPLICATION = 5;
 
 // Absolute minimum fraction of matching sentences to consider a card a match
 export const MIN_COUNT_FRACTION = 0.1;
@@ -40,3 +40,8 @@ export const RATE_LIMIT_DURATION = parseInt(process.env.RATE_LIMIT_DURATION) || 
 
 // Port for ipc used by admin tasks api
 export const IPC_PORT = parseInt(process.env.IPC_PORT) || 3000;
+
+export enum CaselistPriority {
+  BASE = 0,
+  MAX = 9999,
+}

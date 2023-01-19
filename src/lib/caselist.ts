@@ -1,21 +1,29 @@
-import { Queue } from 'typescript-collections';
+import { PriorityQueue } from 'typescript-collections';
 import { DefaultApi, DefaultApiApiKeys } from 'app/constants/caselist/api';
 import { REQUEST_WAIT } from 'app/constants';
 import { omit } from 'lodash';
 import { EVENT_NAMES } from 'app/constants/caselistNames';
 import { TagInput } from './db';
-
-export const caselistApi = new DefaultApi('https://api.opencaselist.com/v1');
-caselistApi.setApiKey(DefaultApiApiKeys.cookie, process.env.CASELIST_TOKEN);
+import { CaselistPriority } from 'app/constants';
 
 // Every REQUEST_WAIT milliseconds, allow a request through
-const requestQueue = new Queue<{ resolve: () => void }>();
-const downloadQueue = new Queue<{ resolve: () => void }>();
+type PriorityRequest = { resolve: () => void; priority: CaselistPriority };
+const requestQueue = new PriorityQueue<PriorityRequest>((a, b) => a.priority - b.priority);
+const downloadQueue = new PriorityQueue<PriorityRequest>((a, b) => a.priority - b.priority);
 setInterval(() => requestQueue.dequeue()?.resolve(), REQUEST_WAIT);
 setInterval(() => downloadQueue.dequeue()?.resolve(), 12.5 * 1000);
-caselistApi.addInterceptor(
-  (req) => new Promise((resolve) => (req.uri.endsWith('download') ? downloadQueue : requestQueue).enqueue({ resolve })),
-);
+
+export const createPriorityCaselistApi = (priority: CaselistPriority): DefaultApi => {
+  const api = new DefaultApi('https://api.opencaselist.com/v1');
+  api.setApiKey(DefaultApiApiKeys.cookie, process.env.CASELIST_TOKEN);
+  api.addInterceptor((req) => {
+    const queue = req.uri.endsWith('download') ? downloadQueue : requestQueue;
+    return new Promise((resolve) => queue.enqueue({ resolve, priority }));
+  });
+  return api;
+};
+export const caselistApi = createPriorityCaselistApi(CaselistPriority.BASE);
+export const priorityCaselistApi = createPriorityCaselistApi(CaselistPriority.MAX);
 
 // This is pretty overcomplicated so types work, but repeating the same code over and over bothered me
 
