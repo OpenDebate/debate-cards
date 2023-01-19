@@ -2,6 +2,8 @@ import { Queue } from 'typescript-collections';
 import { DefaultApi, DefaultApiApiKeys } from 'app/constants/caselist/api';
 import { REQUEST_WAIT } from 'app/constants';
 import { omit } from 'lodash';
+import { EVENT_NAMES } from 'app/constants/caselistNames';
+import { TagInput } from './db';
 
 export const caselistApi = new DefaultApi('https://api.opencaselist.com/v1');
 caselistApi.setApiKey(DefaultApiApiKeys.cookie, process.env.CASELIST_TOKEN);
@@ -58,3 +60,37 @@ export function caselistToPrisma<T extends Record<string, any>, P extends keyof 
     update: { ...fixed },
   };
 }
+
+export interface OpenSourceTagInput {
+  caselist: {
+    event: string;
+    name: string;
+    displayName: string;
+    year: number;
+    level: string;
+  };
+  school: {
+    name: string;
+    displayName: string;
+  };
+  team: {
+    name: string;
+    displayName: string;
+  };
+  round: {
+    side: string;
+  };
+}
+export const openSourceTags = ({ caselist, school, team, round }: OpenSourceTagInput): TagInput[] => [
+  { name: 'wiki', label: 'Wiki' },
+  { name: caselist.name, label: caselist.displayName },
+  { name: caselist.year.toString(), label: caselist.year.toString() },
+  { name: caselist.level, label: caselist.level === 'college' ? 'College' : 'High School' },
+  { name: caselist.event, label: EVENT_NAMES[caselist.event] as string },
+  { name: school.name, label: school.displayName },
+  {
+    name: `${caselist.name}/${school.name}/${team.name}`,
+    label: `${caselist.displayName}/${school.displayName}/${team.displayName}`,
+  },
+  { name: `wiki${round.side}`, label: `Wiki ${round.side === 'A' ? 'Affirmative' : 'Negative'}` },
+];

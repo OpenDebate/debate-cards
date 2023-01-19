@@ -2,10 +2,10 @@ import addCaselist, { onSchoolLoaded } from 'app/actions/addCaselist';
 import addOpenev from 'app/actions/addOpenev';
 import addOpensource, { OpensourceLoadedEvent } from 'app/actions/addOpensource';
 import addSchool, { onTeamLoaded } from 'app/actions/addSchool';
-import addTeam, { onOpensourceLoaded, openSourceTags } from 'app/actions/addTeam';
+import addTeam, { onOpensourceLoaded } from 'app/actions/addTeam';
 import { Caselist, ModelFile } from 'app/constants/caselist/api';
 import { ActionQueue, db } from 'app/lib';
-import { caselistApi } from 'app/lib/caselist';
+import { caselistApi, openSourceTags } from 'app/lib/caselist';
 
 type CaselistLoadOptions = { archived: boolean; active: boolean; years?: number[]; names?: string[] };
 // Concurrency doesn't really matter since api is ratelimited
