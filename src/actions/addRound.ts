@@ -5,7 +5,11 @@ import { onOpensourceLoaded } from './addTeam';
 import { omit } from 'lodash';
 
 export default async ({ caselist, school, team, round }: OpenSourceTagInput & { round: Round }): Promise<number> => {
-  const saveData = { ...omit(round, 'opensource'), opensourcePath: round.opensource };
+  const saveData = {
+    ...omit(round, 'opensource', 'createdAt', 'updatedAt'),
+    opensourcePath: round.opensource,
+    caselistUpdatedAt: round.updatedAt,
+  };
   const saved = await db.round.upsert(caselistToPrisma(saveData, 'roundId', 'teamId'));
   if (round.opensource) {
     onOpensourceLoaded.emit({
