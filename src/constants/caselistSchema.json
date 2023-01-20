@@ -273,7 +273,9 @@
           "opponent",
           "judge",
           "report",
-          "team_id"
+          "team_id",
+          "created_at",
+          "updated_at"
         ],
         "properties": {
           "round_id": {
@@ -320,6 +322,12 @@
           "external_id": {
             "type": "integer",
             "nullable": true
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
           }
         }
       },
