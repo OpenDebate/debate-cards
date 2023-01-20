@@ -43,5 +43,10 @@ export const IPC_PORT = parseInt(process.env.IPC_PORT) || 3000;
 
 export enum CaselistPriority {
   BASE = 0,
+  UPDATE_DOWNLOAD = 1,
+  UPDATE_LOAD = 2,
   MAX = 9999,
 }
+// Time to wait checking for updates to active caselists
+// Should probably make dynamic to respond to activity spikes at some point
+export const UPDATE_WAIT_MS = 60 * 1000;
