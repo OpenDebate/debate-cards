@@ -829,7 +829,7 @@ export class DefaultApi {
      * @summary Returns recent modifications in a caselist
      * @param caselist Which caselist to get modifications for
      */
-    public async getRecent (caselist: string, options: {headers: {[name: string]: string}} = {headers: {}}) : Promise<{ response: http.IncomingMessage; body: Recent;  }> {
+    public async getRecent (caselist: string, options: {headers: {[name: string]: string}} = {headers: {}}) : Promise<{ response: http.IncomingMessage; body: Array<Recent>;  }> {
         const localVarPath = this.basePath + '/caselists/{caselist}/recent'
             .replace('{' + 'caselist' + '}', encodeURIComponent(String(caselist)));
         let localVarQueryParameters: any = {};
@@ -880,13 +880,13 @@ export class DefaultApi {
                     localVarRequestOptions.form = localVarFormParams;
                 }
             }
-            return new Promise<{ response: http.IncomingMessage; body: Recent;  }>((resolve, reject) => {
+            return new Promise<{ response: http.IncomingMessage; body: Array<Recent>;  }>((resolve, reject) => {
                 localVarRequest(localVarRequestOptions, (error, response, body) => {
                     if (error) {
                         reject(error);
                     } else {
                         if (response.statusCode && response.statusCode >= 200 && response.statusCode <= 299) {
-                            body = ObjectSerializer.deserialize(body, "Recent");
+                            body = ObjectSerializer.deserialize(body, "Array<Recent>");
                             resolve({ response: response, body: body });
                         } else {
                             reject(new HttpError(response, body, response.statusCode));

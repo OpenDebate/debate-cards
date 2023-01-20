@@ -13,17 +13,17 @@
 import { RequestFile } from './models';
 
 export class Recent {
-    'teamId'?: number;
-    'side'?: string;
-    'tournament'?: string;
-    'round'?: string;
-    'opponent'?: string;
+    'teamId': number;
+    'side': string;
+    'tournament': string;
+    'roundId': number;
+    'opponent': string;
     'opensource'?: string;
-    'teamName'?: string;
-    'teamDisplayName'?: string;
-    'schoolName'?: string;
-    'schoolDisplayName'?: string;
-    'updatedAt'?: string;
+    'teamName': string;
+    'teamDisplayName': string;
+    'schoolName': string;
+    'schoolDisplayName': string;
+    'updatedAt': string;
 
     static discriminator: string | undefined = undefined;
 
@@ -44,9 +44,9 @@ export class Recent {
             "type": "string"
         },
         {
-            "name": "round",
-            "baseName": "round",
-            "type": "string"
+            "name": "roundId",
+            "baseName": "round_id",
+            "type": "number"
         },
         {
             "name": "opponent",
