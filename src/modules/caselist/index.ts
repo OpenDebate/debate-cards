@@ -3,6 +3,7 @@ import addOpenev from 'app/actions/addOpenev';
 import addOpensource, { OpensourceLoadedEvent } from 'app/actions/addOpensource';
 import addSchool, { onTeamLoaded } from 'app/actions/addSchool';
 import addTeam, { onOpensourceLoaded } from 'app/actions/addTeam';
+import processCaselistUpdates, { onUpdateReady } from 'app/actions/processCaselistUpdates';
 import { Caselist, ModelFile } from 'app/constants/caselist/api';
 import { ActionQueue, db } from 'app/lib';
 import { priorityCaselistApi, openSourceTags } from 'app/lib/caselist';
@@ -106,6 +107,17 @@ export default {
         );
       }
       return tasks;
+    },
+  ),
+  updateQueue: new ActionQueue(
+    'update',
+    processCaselistUpdates,
+    1,
+    onUpdateReady,
+    async ({ caselists: caselistNames }: { caselists?: string[] }) => {
+      return caselistNames
+        ? await Promise.all(caselistNames.map(async (name) => (await priorityCaselistApi.getCaselist(name)).body))
+        : (await priorityCaselistApi.getCaselists(false)).body;
     },
   ),
 };
