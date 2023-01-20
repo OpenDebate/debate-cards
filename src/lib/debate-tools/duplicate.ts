@@ -105,8 +105,6 @@ export type Updates = {
 
 // Does depth first search for all buckets that a card could have affected
 async function getConnectedBuckets(context: RedisContext, visited: Set<SubBucket>, depth: number): Promise<Updates> {
-  if (depth > 3) return;
-
   const visitedCards = new Set([...visited].flatMap((subBucket) => subBucket.members));
   const newMatches = uniq(
     [...visited].flatMap((card) => [...card.matching.keys()]).filter((id) => !visitedCards.has(id)),
@@ -115,7 +113,7 @@ async function getConnectedBuckets(context: RedisContext, visited: Set<SubBucket
     .map((card) => card?.subBucket)
     .filter((el) => el != null);
   const newSubBuckets = uniq(cardSubBuckets).filter((cardSubBucket) => !visited.has(cardSubBucket));
-  if (newSubBuckets.length === 0) {
+  if (newSubBuckets.length === 0 || depth > 3) {
     const bucketSets = uniq(await Promise.all([...visited.values()].map((subBucket) => subBucket.getBucketSet())));
     const updates = await Promise.all(
       bucketSets.map(async (bucketSet) => ({
