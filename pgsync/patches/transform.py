@@ -1,6 +1,6 @@
-"""PGSync transform."""
+"""PGSync Transform."""
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from .constants import (  # noqa
     CONCAT_TRANSFORM,
@@ -15,7 +15,17 @@ class Transform(object):
     """Transform is really a builtin plugin"""
 
     @classmethod
-    def rename(
+    def rename(cls, data: dict, nodes: dict) -> dict:
+        """Rename keys in a nested dictionary based on transform_node.
+        "rename": {
+            "id": "publisher_id",
+            "name": "publisher_name"
+        },
+        """
+        return cls._rename(data, cls.get(nodes, RENAME_TRANSFORM))
+
+    @classmethod
+    def _rename(
         cls, data: dict, nodes: dict, result: Optional[dict] = None
     ) -> dict:
         """Rename keys in a nested dictionary based on transform_node.
@@ -24,17 +34,17 @@ class Transform(object):
             "name": "publisher_name"
         },
         """
-        result: dict = result or {}
+        result = result or {}
         if isinstance(data, dict):
             for key, value in data.items():
                 if isinstance(nodes.get(key), str):
                     key = nodes[key]
                 elif isinstance(value, dict):
                     if key in nodes:
-                        value = cls.rename(value, nodes[key])
+                        value = cls._rename(value, nodes[key])
                 elif key in nodes.keys():
                     if isinstance(value, list):
-                        value = [cls.rename(v, nodes[key]) for v in value]
+                        value = [cls._rename(v, nodes[key]) for v in value]
                     elif isinstance(value, (str, int, float)):
                         if nodes[key]:
                             key = str(nodes[key])
@@ -42,7 +52,18 @@ class Transform(object):
         return result
 
     @classmethod
-    def concat(
+    def concat(cls, data: dict, nodes: dict) -> dict:
+        """Concatenate column values into a new field
+        {
+            "columns": ["publisher_id", "publisher_name", "is_active", "foo"],
+            "destination": "new_field",
+            "delimiter": "-"
+        },
+        """
+        return cls._concat(data, cls.get(nodes, CONCAT_TRANSFORM))
+
+    @classmethod
+    def _concat(
         cls, data: dict, nodes: dict, result: Optional[dict] = None
     ) -> dict:
         """Concatenate column values into a new field
@@ -52,10 +73,10 @@ class Transform(object):
             "delimiter": "-"
         },
         """
-        result: dict = result or {}
+        result = result or {}
         if isinstance(nodes, list):
             for node in nodes:
-                cls.concat(data, node, result=result)
+                cls._concat(data, node, result=result)
 
         if isinstance(data, dict):
             if "columns" in nodes:
@@ -68,10 +89,10 @@ class Transform(object):
             for key, value in data.items():
                 if key in nodes:
                     if isinstance(value, dict):
-                        value = cls.concat(value, nodes[key])
+                        value = cls._concat(value, nodes[key])
                     elif isinstance(value, list):
                         value = [
-                            cls.concat(v, nodes[key])
+                            cls._concat(v, nodes[key])
                             for v in value
                             if key in nodes
                         ]
@@ -80,7 +101,18 @@ class Transform(object):
 
     """
     @classmethod
-    def replace(
+    def replace(cls, data: dict, nodes: dict) -> dict:
+        # TODO!
+        Replace field where value is
+        "replace": {
+            "code": {
+                "-": "="
+            }
+        }
+        return cls._replace(data, cls.get(nodes, REPLACE_TRANSFORM)))
+
+    @classmethod
+    def _replace(
         cls, data: dict, nodes: dict, result: Optional[dict] = None
     ) -> dict:
         # TODO!
@@ -109,10 +141,10 @@ class Transform(object):
 
             for key, value in data.items():
                 if isinstance(value, dict):
-                    value = cls.replace(value, nodes.get(key))
+                    value = cls._replace(value, nodes.get(key))
                 elif isinstance(value, list):
                     value = [
-                        cls.replace(v, nodes[key])
+                        cls._replace(v, nodes[key])
                         for v in value
                         if key in nodes
                     ]
@@ -122,9 +154,9 @@ class Transform(object):
 
     @classmethod
     def transform(cls, data: dict, nodes: dict):
-        data = cls.rename(data, cls.get(nodes, RENAME_TRANSFORM))
-        data = cls.concat(data, cls.get(nodes, CONCAT_TRANSFORM))
-        # data = cls.replace(data, cls.get(nodes, REPLACE_TRANSFORM))
+        data = cls.rename(data, nodes)
+        data = cls.concat(data, nodes)
+        # data = cls.replace(data, nodes)
         return data
 
     @classmethod
@@ -139,63 +171,62 @@ class Transform(object):
                 transform_node[child.get("label", child["table"])] = node
         return transform_node
 
+    @classmethod
+    def get_primary_keys(cls, primary_keys: dict) -> dict:
+        """Get private keys entry from a nested dict."""
 
-def get_private_keys(primary_keys):
-    """Get private keys entry from a nested dict."""
-
-    def squash_list(values, _values=None):
-        if not _values:
-            _values = []
-        if isinstance(values, dict):
-            if len(values) == 1:
-                _values.append(values)
-            else:
-                for key, value in values.items():
-                    _values.extend(squash_list({key: value}))
-        elif isinstance(values, list):
-            for value in values:
-                _values.extend(squash_list(value))
-        return _values
-
-    target = []
-    for values in squash_list(primary_keys):
-        if len(values) > 1:
-            for key, value in values.items():
-                target.append({key: value})
-            continue
-        target.append(values)
-
-    target3 = []
-    for values in target:
-        for key, value in values.items():
-            if isinstance(value, dict):
-                target3.append({key: value})
-            elif isinstance(value, list):
-                _value = {}
-                for v in value:
-                    for _k, _v in v.items():
-                        _value.setdefault(_k, [])
-                        if isinstance(_v, list):
-                            _value[_k].extend(_v)
-                        else:
-                            _value[_k].append(_v)
-                target3.append({key: _value})
-
-    target4 = {}
-    for values in target3:
-        for key, value in values.items():
-            if key not in target4:
-                target4[key] = {}
-            for k, v in value.items():
-                if k not in target4[key]:
-                    target4[key][k] = []
-                if isinstance(v, list):
-                    for _v in v:
-                        if _v not in target4[key][k]:
-                            target4[key][k].append(_v)
-                    target4[key][k] = target4[key][k]
+        def squash_list(values, _values=None):
+            if not _values:
+                _values = []
+            if isinstance(values, dict):
+                if len(values) == 1:
+                    _values.append(values)
                 else:
-                    if v not in target4[key][k]:
-                        target4[key][k].append(v)
-                target4[key][k] = sorted(target4[key][k])
-    return target4
+                    for key, value in values.items():
+                        _values.extend(squash_list({key: value}))
+            elif isinstance(values, list):
+                for value in values:
+                    _values.extend(squash_list(value))
+            return _values
+
+        target = []
+        for values in squash_list(primary_keys):
+            if len(values) > 1:
+                for key, value in values.items():
+                    target.append({key: value})
+                continue
+            target.append(values)
+
+        target3 = []
+        for values in target:
+            for key, value in values.items():
+                if isinstance(value, dict):
+                    target3.append({key: value})
+                elif isinstance(value, list):
+                    _value: Dict[Any, Any] = {}
+                    for v in value:
+                        for _k, _v in v.items():
+                            _value.setdefault(_k, [])
+                            if isinstance(_v, list):
+                                _value[_k].extend(_v)
+                            else:
+                                _value[_k].append(_v)
+                    target3.append({key: _value})
+
+        target4 = {}
+        for values in target3:
+            for key, value in values.items():
+                if key not in target4:
+                    target4[key] = {}
+                for k, v in value.items():
+                    if k not in target4[key]:
+                        target4[key][k] = []
+                    if isinstance(v, list):
+                        for _v in v:
+                            if _v not in target4[key][k]:
+                                target4[key][k].append(_v)
+                    else:
+                        if v not in target4[key][k]:
+                            target4[key][k].append(v)
+                    target4[key][k] = sorted(target4[key][k])
+        return target4
