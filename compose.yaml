@@ -56,6 +56,11 @@ services:
       - ELASTICSEARCH_HOST=elasticsearch
       - REDIS_HOST=redis
       - REDIS_AUTH=${REDIS_PASSWORD}
+      - CHECKPOINT_PATH=/checkpoint/
+      - ELASTICSEARCH_TIMEOUT=20
+      - ELASTICSEARCH_CHUNK_SIZE=250
+    volumes:
+      - pgsyncCheckpoint:/checkpoint
   tasks:
     build: .
     command: npm run start:tasks
@@ -74,7 +79,7 @@ services:
     command: npm run dev:api
     depends_on:
       - postgres
-      - elasticsearch
+      - elasticsearch 
     env_file: .env
     ports:
       - 4000:4000
@@ -98,3 +103,4 @@ volumes:
   db: {}
   elastic: {}
   redis: {}
+  pgsyncCheckpoint: {}
