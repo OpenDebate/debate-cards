@@ -13,7 +13,7 @@ services:
       - elastic:/usr/share/elasticsearch/data
   postgres:
     image: postgres:14
-    command: postgres -c wal_level=logical -c max_replication_slots=2 # Options for pgsync
+    command: postgres -c wal_level=logical -c max_replication_slots=3 # Options for pgsync
     env_file: .env
     expose:
       - 5432

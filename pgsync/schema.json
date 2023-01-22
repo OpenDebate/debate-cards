@@ -118,5 +118,157 @@
                 }
             ]
         }
+    },
+    {
+        "database": "debate-cards",
+        "index": "cites",
+        "settings": {
+            "analysis": {
+                "analyzer": {
+                    "type": "language",
+                    "language": "English"
+                }
+            }
+        },
+        "nodes": {
+            "table": "Cite",
+            "columns": [
+                "id",
+                "citeId",
+                "title",
+                "cites"
+            ],
+            "relationship": {
+                "variant": "object",
+                "type": "one_to_many"
+            },
+            "transform": {
+                "mapping": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "citeId": {
+                        "type": "integer"
+                    },
+                    "title": {
+                        "type": "text"
+                    },
+                    "cites": {
+                        "type": "text"
+                    }
+                }
+            },
+            "children": [
+                {
+                    "table": "Round",
+                    "label": "round",
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_one"
+                    },
+                    "columns": [
+                        "id",
+                        "roundId",
+                        "side",
+                        "tournament",
+                        "round",
+                        "opponent",
+                        "judge",
+                        "report",
+                        "opensourcePath",
+                        "video",
+                        "tournId"
+                    ],
+                    "transform": {
+                        "mapping": {
+                            "side": {
+                                "type": "keyword"
+                            },
+                            "tournament": {
+                                "type": "text"
+                            },
+                            "round": {
+                                "type": "keyword"
+                            },
+                            "opponent": {
+                                "type": "text"
+                            },
+                            "judge": {
+                                "type": "text"
+                            },
+                            "report": {
+                                "type": "text"
+                            },
+                            "opensourcePath": {
+                                "type": "keyword"
+                            },
+                            "video": {
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "children": [
+                        {
+                            "table": "Team",
+                            "label": "team",
+                            "relationship": {
+                                "variant": "object",
+                                "type": "one_to_one"
+                            },
+                            "columns": [
+                                "id",
+                                "teamId",
+                                "name"
+                            ],
+                            "transform": {
+                                "name": {
+                                    "type": "keyword"
+                                }
+                            },
+                            "children": [
+                                {
+                                    "table": "School",
+                                    "label": "school",
+                                    "relationship": {
+                                        "variant": "object",
+                                        "type": "one_to_one"
+                                    },
+                                    "columns": [
+                                        "id",
+                                        "schoolId",
+                                        "name"
+                                    ],
+                                    "transform": {
+                                        "name": {
+                                            "type": "keyword"
+                                        }
+                                    },
+                                    "children": [
+                                        {
+                                            "table": "Caselist",
+                                            "label": "caselist",
+                                            "relationship": {
+                                                "variant": "object",
+                                                "type": "one_to_one"
+                                            },
+                                            "columns": [
+                                                "id",
+                                                "caselistId",
+                                                "name"
+                                            ],
+                                            "transform": {
+                                                "name": {
+                                                    "type": "keyword"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
     }
 ]
