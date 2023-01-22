@@ -5,7 +5,7 @@ import { Args, Info, Query, Resolver } from 'type-graphql';
 import { selectFields } from 'app/lib/graphql';
 import { db } from 'app/lib/db';
 import { GraphQLResolveInfo } from 'graphql';
-import { CaselistInput, CiteSearchInput, SchoolInput, TeamInput } from '../inputs';
+import { CaselistInput, CiteSearchInput, ReportSearchInput, SchoolInput, TeamInput } from '../inputs';
 import { elastic } from 'app/lib/elastic';
 import { flatMap } from 'lodash';
 
@@ -61,7 +61,17 @@ class RoundResolver extends createGetResolver('round', Round, [
   { name: 'cites', paginate: true, defaultLength: 3 },
   { name: 'team' },
   { name: 'opensource' },
-]) {}
+]) {
+  @Query((returns) => [Round], { complexity: ({ args, childComplexity }) => 100 + args.take * childComplexity })
+  async searchReports(@Args() { keywords, skip, take }: ReportSearchInput, @Info() info: GraphQLResolveInfo) {
+    return db.round.findMany({
+      where: { AND: keywords.map((keyword) => ({ report: { contains: keyword } })) },
+      take,
+      skip,
+      select: selectFields(info),
+    });
+  }
+}
 
 @Resolver(Cite)
 class CiteResolver extends createGetResolver('cite', Cite, [{ name: 'round' }]) {

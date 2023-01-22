@@ -17,6 +17,17 @@ export class TeamInput extends SchoolInput {
 }
 
 @ArgsType()
+export class ReportSearchInput {
+  @Field((type) => [String])
+  keywords: string[];
+
+  @Field((type) => Int, { defaultValue: 10 })
+  take: number;
+
+  @Field((type) => Int, { defaultValue: 0 })
+  skip: number;
+}
+@ArgsType()
 export class CiteSearchInput {
   @Field()
   query: string;
