@@ -28,52 +28,6 @@
                 "fileId",
                 "bucketId"
             ],
-            "children": [
-                {
-                    "table": "EvidenceBucket",
-                    "label": "duplicateCount",
-                    "columns": [
-                        "count"
-                    ],
-                    "relationship": {
-                        "variant": "scalar",
-                        "type": "one_to_one"
-                    }
-                },
-                {
-                    "table": "File",
-                    "columns": [
-                        "gid"
-                    ],
-                    "relationship": {
-                        "variant": "object",
-                        "type": "one_to_one"
-                    },
-                    "transform": {
-                        "mapping": {
-                            "tags": {
-                                "type": "keyword"
-                            }
-                        }
-                    },
-                    "children": [
-                        {
-                            "table": "Tag",
-                            "label": "tags",
-                            "columns": [
-                                "name"
-                            ],
-                            "relationship": {
-                                "variant": "scalar",
-                                "type": "one_to_many",
-                                "through_tables": [
-                                    "_FileToTag"
-                                ]
-                            }
-                        }
-                    ]
-                }
-            ],
             "transform": {
                 "mapping": {
                     "id": {
@@ -116,7 +70,53 @@
                         "type": "integer"
                     }
                 }
-            }
+            },
+            "children": [
+                {
+                    "table": "EvidenceBucket",
+                    "label": "duplicateCount",
+                    "relationship": {
+                        "variant": "scalar",
+                        "type": "one_to_one"
+                    },
+                    "columns": [
+                        "count"
+                    ]
+                },
+                {
+                    "table": "File",
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_one"
+                    },
+                    "columns": [
+                        "gid"
+                    ],
+                    "transform": {
+                        "mapping": {
+                            "tags": {
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "children": [
+                        {
+                            "table": "Tag",
+                            "label": "tags",
+                            "columns": [
+                                "name"
+                            ],
+                            "relationship": {
+                                "variant": "scalar",
+                                "type": "one_to_many",
+                                "through_tables": [
+                                    "_FileToTag"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
         }
     }
 ]
