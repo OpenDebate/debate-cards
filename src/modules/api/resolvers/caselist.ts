@@ -5,7 +5,9 @@ import { Args, Info, Query, Resolver } from 'type-graphql';
 import { selectFields } from 'app/lib/graphql';
 import { db } from 'app/lib/db';
 import { GraphQLResolveInfo } from 'graphql';
-import { CaselistInput, SchoolInput, TeamInput } from '../inputs';
+import { CaselistInput, CiteSearchInput, ReportSearchInput, SchoolInput, TeamInput } from '../inputs';
+import { elastic } from 'app/lib/elastic';
+import { flatMap } from 'lodash';
 
 @Resolver(Caselist)
 class CaselistResolver extends createGetResolver('caselist', Caselist, [
@@ -59,9 +61,41 @@ class RoundResolver extends createGetResolver('round', Round, [
   { name: 'cites', paginate: true, defaultLength: 3 },
   { name: 'team' },
   { name: 'opensource' },
-]) {}
+]) {
+  @Query((returns) => [Round], { complexity: ({ args, childComplexity }) => 100 + args.take * childComplexity })
+  async searchReports(@Args() { keywords, skip, take }: ReportSearchInput, @Info() info: GraphQLResolveInfo) {
+    return db.round.findMany({
+      where: { AND: keywords.map((keyword) => ({ report: { contains: keyword } })) },
+      take,
+      skip,
+      select: selectFields(info),
+    });
+  }
+}
 
 @Resolver(Cite)
-class CiteResolver extends createGetResolver('cite', Cite, [{ name: 'round' }]) {}
+class CiteResolver extends createGetResolver('cite', Cite, [{ name: 'round' }]) {
+  @Query((returns) => [Cite], { complexity: ({ args, childComplexity }) => 1000 + args.take * childComplexity })
+  async searchCites(@Args() { query, skip, take }: CiteSearchInput, @Info() info: GraphQLResolveInfo) {
+    const results = await elastic.search({
+      index: 'cites',
+      size: take,
+      from: skip,
+      query: {
+        query_string: {
+          query,
+          fields: ['cites'],
+        },
+      },
+      _source: false,
+      docvalue_fields: ['id'],
+    });
+    console.log(results.hits.hits);
+    const ids: number[] = flatMap(results.hits.hits, 'fields.id');
+    const cites = await db.cite.findMany({ where: { id: { in: ids } }, select: selectFields(info) });
+    // Resort results based on ranking
+    return cites.sort((a: { id: number }, b: { id: number }) => ids.indexOf(a.id) - ids.indexOf(b.id));
+  }
+}
 
 export const caselistResolvers = [CaselistResolver, SchoolResolver, TeamResolver, RoundResolver, CiteResolver];

@@ -22,10 +22,10 @@ export const rateLimitPlugin = (schema: GraphQLSchema): PluginDefinition => ({
         });
         if (complexity > 0 && complexity < 100) complexity = 100;
         complexity = Math.floor(complexity / 100);
-        if (complexity > 100) {
-          throw new Error(`Query complexity of ${complexity} is greater than maximum ${MAX_COMPLEXITY}`);
-        }
         if (complexity && !context.auth?.admin) {
+          if (complexity > 100) {
+            throw new Error(`Query complexity of ${complexity} is greater than maximum ${MAX_COMPLEXITY}`);
+          }
           try {
             await rateLimiter.consume(getUserKey(context), complexity);
           } catch (res) {

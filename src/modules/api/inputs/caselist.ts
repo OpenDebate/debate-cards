@@ -1,4 +1,4 @@
-import { ArgsType, Field } from 'type-graphql';
+import { ArgsType, Field, Int } from 'type-graphql';
 
 @ArgsType()
 export class CaselistInput {
@@ -14,4 +14,27 @@ export class SchoolInput extends CaselistInput {
 export class TeamInput extends SchoolInput {
   @Field()
   team: string;
+}
+
+@ArgsType()
+export class ReportSearchInput {
+  @Field((type) => [String])
+  keywords: string[];
+
+  @Field((type) => Int, { defaultValue: 10 })
+  take: number;
+
+  @Field((type) => Int, { defaultValue: 0 })
+  skip: number;
+}
+@ArgsType()
+export class CiteSearchInput {
+  @Field()
+  query: string;
+
+  @Field((type) => Int, { defaultValue: 10 })
+  take: number;
+
+  @Field((type) => Int, { defaultValue: 0 })
+  skip: number;
 }
