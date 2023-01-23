@@ -28,6 +28,52 @@
                 "fileId",
                 "bucketId"
             ],
+            "children": [
+                {
+                    "table": "EvidenceBucket",
+                    "label": "duplicateCount",
+                    "columns": [
+                        "count"
+                    ],
+                    "relationship": {
+                        "variant": "scalar",
+                        "type": "one_to_one"
+                    }
+                },
+                {
+                    "table": "File",
+                    "columns": [
+                        "gid"
+                    ],
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_one"
+                    },
+                    "transform": {
+                        "mapping": {
+                            "tags": {
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "children": [
+                        {
+                            "table": "Tag",
+                            "label": "tags",
+                            "columns": [
+                                "name"
+                            ],
+                            "relationship": {
+                                "variant": "scalar",
+                                "type": "one_to_many",
+                                "through_tables": [
+                                    "_FileToTag"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ],
             "transform": {
                 "mapping": {
                     "id": {
@@ -53,10 +99,6 @@
                     },
                     "fulltext": {
                         "type": "text"
-                    },
-                    "markup": {
-                        "type": "text",
-                        "index": false
                     },
                     "pocket": {
                         "type": "text"

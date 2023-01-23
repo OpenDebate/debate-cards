@@ -1,17 +1,10 @@
 import { createClient, commandOptions } from 'redis';
 import { createHash } from 'crypto';
 
-interface CustomNodeJsGlobal extends NodeJS.Global {
-  redis: ReturnType<typeof createClient>;
-}
-
-declare const global: CustomNodeJsGlobal;
-export const redis =
-  global.redis ||
-  createClient({
-    url: 'redis://redis:6379',
-    password: process.env.REDIS_PASSWORD,
-  });
+export const redis = createClient({
+  url: 'redis://redis:6379',
+  password: process.env.REDIS_PASSWORD,
+});
 redis.connect();
 
 export type SentenceMatch = { cardId: number; index: number };

@@ -2,15 +2,17 @@ import { TextBlock, StyleName, getStyles, tokensToMarkup } from '.';
 
 const extractText = (blocks: TextBlock[], styles?: StyleName[]): string => {
   if (!blocks[0]) return;
-  return blocks.reduce((acc, block) => {
-    // join text and add spacing if skipping tokens
-    const text = block?.tokens.reduce((str, token) => {
-      if (!styles || styles.every((style) => token.format[style])) return str + token.text;
-      else return str.trim() + ' ';
-    }, '');
+  return blocks
+    .reduce((acc, block) => {
+      // join text and add spacing if skipping tokens
+      const text = block?.tokens.reduce((str, token) => {
+        if (!styles || styles.every((style) => token.format[style])) return str + token.text;
+        else return str.trim() + ' ';
+      }, '');
 
-    return acc.trim() + '\n' + text.trim();
-  }, '');
+      return acc.trim() + '\n' + text.trim();
+    }, '')
+    .trim();
 };
 
 export const getIndexesWith = (blocks: TextBlock[], styles: StyleName[]): number[] => {

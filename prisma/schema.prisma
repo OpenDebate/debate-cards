@@ -41,6 +41,9 @@ model Evidence {
   bucketId Int?
 
   root EvidenceBucket? @relation("root")
+
+  @@index([fileId])
+  @@index([bucketId])
 }
 
 model File {
@@ -57,7 +60,9 @@ model File {
   roundId Int?   @unique
 
   evidence Evidence[]
-  tags     Tags[]
+  tags     Tag[]
+
+  @@index([roundId])
 }
 
 enum FileStatus {
@@ -67,7 +72,7 @@ enum FileStatus {
   ERROR
 }
 
-model Tags {
+model Tag {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -112,6 +117,9 @@ model School {
   caselistId Int
 
   teams Team[]
+
+  @@unique([name, caselistId])
+  @@index([caselistId])
 }
 
 model Team {
@@ -141,6 +149,9 @@ model Team {
   schoolId Int
 
   rounds Round[]
+
+  @@unique([name, schoolId])
+  @@index([teamId])
 }
 
 model Round {
@@ -164,6 +175,8 @@ model Round {
   team   Team   @relation(fields: [teamId], references: [teamId])
   teamId Int
   cites  Cite[]
+
+  @@index([teamId])
 }
 
 model Cite {
@@ -177,4 +190,6 @@ model Cite {
 
   round   Round @relation(fields: [roundId], references: [roundId])
   roundId Int
+
+  @@index([roundId])
 }

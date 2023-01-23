@@ -14,4 +14,3 @@ COPY tsconfig.json .
 COPY src src
 
 RUN yarn run build
-CMD ["yarn", "run", "start"]

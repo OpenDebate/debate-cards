@@ -8,7 +8,7 @@
     "ecmaVersion": 11,
     "sourceType": "module"
   },
-  "plugins": ["@typescript-eslint"],
+  "plugins": ["@typescript-eslint", "type-grapqhql"],
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/eslint-recommended",
@@ -28,18 +28,6 @@
     }
   },
   "rules": {
-    // "import/extensions": [
-    //   "error",
-    //   "ignorePackages",
-    //   {
-    //     "js": "never",
-    //     "mjs": "never",
-    //     "jsx": "never",
-    //     "ts": "never",
-    //     "tsx": "never"
-    //   }
-    // ],
-    // "no-console": 0,
     "@typescript-eslint/no-explicit-any": "off"
   },
   "ignorePatterns": ["src/constants/caselist/**/*"]

@@ -1,4 +1,5 @@
-import { SentenceMatch, Sentence, Info, Children, Lock } from 'app/lib';
+import { Lock } from 'app/lib';
+import { SentenceMatch, Sentence, Info, Children } from 'app/lib/redis';
 import { EDGE_TOLERANCE, INSIDE_TOLERANCE, SENTENCE_REGEX } from 'app/constants';
 import { groupBy, map, min, max, uniq } from 'lodash';
 
