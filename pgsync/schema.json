@@ -1,0 +1,92 @@
+[
+    {
+        "database": "debate-cards",
+        "index": "evidence",
+        "settings": {
+            "analysis": {
+                "analyzer": {
+                    "type": "language",
+                    "language": "English"
+                }
+            }
+        },
+        "nodes": {
+            "table": "Evidence",
+            "columns": [
+                "id",
+                "gid",
+                "tag",
+                "cite",
+                "fullcite",
+                "summary",
+                "spoken",
+                "fulltext",
+                "markup",
+                "pocket",
+                "hat",
+                "block",
+                "fileId",
+                "bucketId"
+            ],
+            "children": [
+                {
+                    "table": "File",
+                    "columns": [
+                        "evidenceSetId"
+                    ],
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_many"
+                    }
+                }
+            ],
+            "transform": {
+                "mapping": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "gid": {
+                        "type": "keyword"
+                    },
+                    "tag": {
+                        "type": "text"
+                    },
+                    "cite": {
+                        "type": "text"
+                    },
+                    "fullcite": {
+                        "type": "text"
+                    },
+                    "summary": {
+                        "type": "text"
+                    },
+                    "spoken": {
+                        "type": "text"
+                    },
+                    "fulltext": {
+                        "type": "text"
+                    },
+                    "markup": {
+                        "type": "text",
+                        "index": false
+                    },
+                    "pocket": {
+                        "type": "text"
+                    },
+                    "hat": {
+                        "type": "text"
+                    },
+                    "block": {
+                        "type": "text"
+                    },
+                    "fileId": {
+                        "type": "integer"
+                    },
+                    "bucketId": {
+                        "type": "integer"
+                    }
+                }
+            }
+        }
+    }
+]
