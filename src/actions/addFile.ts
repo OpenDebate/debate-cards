@@ -11,6 +11,7 @@ export const onAddFile = new TypedEvent<{ gid: string }>();
 const onFileLoaded = new TypedEvent<{ data: FileData & { gid: string }; resolve: (value: unknown) => void }>();
 
 new ActionQueue(
+  'file',
   async ({ data, resolve }: { data: FileData & { gid: string }; resolve: () => void }): Promise<void> => {
     try {
       const doc = await db.file.upsert({

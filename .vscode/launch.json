@@ -3,6 +3,20 @@
   "configurations": [
     {
       "type": "node",
+      "request": "attach",
+      "name": "Debug Tasks",
+      "remoteRoot": "/app",
+      "port": 9229
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Debug API",
+      "remoteRoot": "/app",
+      "port": 9230
+    },
+    {
+      "type": "node",
       "request": "launch",
       "name": "Launch Program",
       "program": "${workspaceFolder}/src/index.ts",

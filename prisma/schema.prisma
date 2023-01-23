@@ -163,9 +163,9 @@ model Round {
   side           String
   tournament     String
   round          String
-  opponent       String
-  judge          String
-  report         String
+  opponent       String?
+  judge          String?
+  report         String?
   opensourcePath String?
   opensource     File?
   video          String?

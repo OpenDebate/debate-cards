@@ -25,12 +25,3 @@ async function makeFile(id: number) {
   await writeFile('./test.docx', file);
   console.log('File built');
 }
-
-(async () => {
-  try {
-    await caselist.openevQueue.load();
-    await caselist.caselistQueue.load();
-  } catch (error) {
-    console.error(error);
-  }
-})();

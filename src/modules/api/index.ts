@@ -14,12 +14,16 @@ async function main() {
     resolvers: [
       RateLimitResolver,
       resolvers.AuthResolver,
+      ...resolvers.QueueResolvers,
+
       resolvers.EvidenceResolver,
       resolvers.FileResolver,
       resolvers.EvidenceBucketResolver,
       resolvers.TagResolver,
       ...resolvers.caselistResolvers,
     ],
+    // Return true if query dosent require admin, or user has admin
+    authChecker: ({ context }, roles) => !roles.includes('ADMIN') || context.auth?.admin,
   });
 
   const server = new ApolloServer({
@@ -50,3 +54,7 @@ async function main() {
   });
 }
 main();
+export default {
+  name: 'api',
+  main,
+};

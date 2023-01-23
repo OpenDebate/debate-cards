@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Round" ALTER COLUMN "opponent" DROP NOT NULL,
+ALTER COLUMN "judge" DROP NOT NULL,
+ALTER COLUMN "report" DROP NOT NULL;

@@ -4,10 +4,7 @@ import { Caselist as CaselistModel } from '@prisma/client';
 import { School } from '.';
 
 @ObjectType()
-export class Caselist implements Partial<CaselistModel> {
-  @Field((type) => ID)
-  id: number;
-
+export class CaselistBase implements Partial<CaselistModel> {
   @Field((type) => ID)
   caselistId: number;
 
@@ -31,6 +28,12 @@ export class Caselist implements Partial<CaselistModel> {
 
   @Field({ nullable: true })
   archiveUrl?: string;
+}
+
+@ObjectType()
+export class Caselist extends CaselistBase implements Partial<CaselistModel> {
+  @Field((type) => ID)
+  id: number;
 
   @Field((type) => [School])
   schools: School[];
