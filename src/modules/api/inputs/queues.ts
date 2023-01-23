@@ -68,3 +68,8 @@ export class OpensourceLoadInput implements ExtractLoadArgs<typeof caselistModul
   @Field()
   loadPending: boolean;
 }
+@ArgsType()
+export class UpdateLoadInput implements ExtractLoadArgs<typeof caselistModule['updateQueue']> {
+  @Field((type) => [String], { nullable: true })
+  caselists?: string[];
+}

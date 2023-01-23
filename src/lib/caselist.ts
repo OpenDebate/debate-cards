@@ -1,19 +1,29 @@
-import { Queue } from 'typescript-collections';
+import { PriorityQueue } from 'typescript-collections';
 import { DefaultApi, DefaultApiApiKeys } from 'app/constants/caselist/api';
 import { REQUEST_WAIT } from 'app/constants';
 import { omit } from 'lodash';
-
-export const caselistApi = new DefaultApi('https://api.opencaselist.com/v1');
-caselistApi.setApiKey(DefaultApiApiKeys.cookie, process.env.CASELIST_TOKEN);
+import { EVENT_NAMES } from 'app/constants/caselistNames';
+import { TagInput } from './db';
+import { CaselistPriority } from 'app/constants';
 
 // Every REQUEST_WAIT milliseconds, allow a request through
-const requestQueue = new Queue<{ resolve: () => void }>();
-const downloadQueue = new Queue<{ resolve: () => void }>();
+type PriorityRequest = { resolve: () => void; priority: CaselistPriority };
+const requestQueue = new PriorityQueue<PriorityRequest>((a, b) => a.priority - b.priority);
+const downloadQueue = new PriorityQueue<PriorityRequest>((a, b) => a.priority - b.priority);
 setInterval(() => requestQueue.dequeue()?.resolve(), REQUEST_WAIT);
 setInterval(() => downloadQueue.dequeue()?.resolve(), 12.5 * 1000);
-caselistApi.addInterceptor(
-  (req) => new Promise((resolve) => (req.uri.endsWith('download') ? downloadQueue : requestQueue).enqueue({ resolve })),
-);
+
+export const createPriorityCaselistApi = (priority: CaselistPriority): DefaultApi => {
+  const api = new DefaultApi('https://api.opencaselist.com/v1');
+  api.setApiKey(DefaultApiApiKeys.cookie, process.env.CASELIST_TOKEN);
+  api.addInterceptor((req) => {
+    const queue = req.uri.endsWith('download') ? downloadQueue : requestQueue;
+    return new Promise((resolve) => queue.enqueue({ resolve, priority }));
+  });
+  return api;
+};
+export const caselistApi = createPriorityCaselistApi(CaselistPriority.BASE);
+export const priorityCaselistApi = createPriorityCaselistApi(CaselistPriority.MAX);
 
 // This is pretty overcomplicated so types work, but repeating the same code over and over bothered me
 
@@ -58,3 +68,37 @@ export function caselistToPrisma<T extends Record<string, any>, P extends keyof 
     update: { ...fixed },
   };
 }
+
+export interface OpenSourceTagInput {
+  caselist: {
+    event: string;
+    name: string;
+    displayName: string;
+    year: number;
+    level: string;
+  };
+  school: {
+    name: string;
+    displayName: string;
+  };
+  team: {
+    name: string;
+    displayName: string;
+  };
+  round: {
+    side: string;
+  };
+}
+export const openSourceTags = ({ caselist, school, team, round }: OpenSourceTagInput): TagInput[] => [
+  { name: 'wiki', label: 'Wiki' },
+  { name: caselist.name, label: caselist.displayName },
+  { name: caselist.year.toString(), label: caselist.year.toString() },
+  { name: caselist.level, label: caselist.level === 'college' ? 'College' : 'High School' },
+  { name: caselist.event, label: EVENT_NAMES[caselist.event] as string },
+  { name: school.name, label: school.displayName },
+  {
+    name: `${caselist.name}/${school.name}/${team.name}`,
+    label: `${caselist.displayName}/${school.displayName}/${team.displayName}`,
+  },
+  { name: `wiki${round.side}`, label: `Wiki ${round.side === 'A' ? 'Affirmative' : 'Negative'}` },
+];

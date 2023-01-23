@@ -25,6 +25,8 @@ export class Round {
     'video'?: string | null;
     'tournId'?: number | null;
     'externalId'?: number | null;
+    'createdAt': string;
+    'updatedAt': string;
 
     static discriminator: string | undefined = undefined;
 
@@ -88,6 +90,16 @@ export class Round {
             "name": "externalId",
             "baseName": "external_id",
             "type": "number"
+        },
+        {
+            "name": "createdAt",
+            "baseName": "created_at",
+            "type": "string"
+        },
+        {
+            "name": "updatedAt",
+            "baseName": "updated_at",
+            "type": "string"
         }    ];
 
     static getAttributeTypeMap() {

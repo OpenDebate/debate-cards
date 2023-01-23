@@ -159,18 +159,19 @@ model Round {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  roundId        Int     @unique
-  side           String
-  tournament     String
-  round          String
-  opponent       String?
-  judge          String?
-  report         String?
-  opensourcePath String?
-  opensource     File?
-  video          String?
-  tournId        Int?
-  externalId     Int?
+  roundId           Int     @unique
+  side              String
+  tournament        String
+  round             String
+  opponent          String?
+  judge             String?
+  report            String?
+  opensourcePath    String?
+  opensource        File?
+  video             String?
+  tournId           Int?
+  externalId        Int?
+  caselistUpdatedAt String?
 
   team   Team   @relation(fields: [teamId], references: [teamId])
   teamId Int

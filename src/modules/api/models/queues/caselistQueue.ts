@@ -84,3 +84,6 @@ export class OpensourceTask implements QueueDataType<typeof caselistModule['open
   @Field((type) => [TagArgs])
   tags: TagArgs[];
 }
+
+@ObjectType()
+export class UpdateTask extends CaselistTask implements QueueDataType<typeof caselistModule['updateQueue']> {}

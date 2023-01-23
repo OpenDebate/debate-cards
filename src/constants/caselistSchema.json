@@ -213,6 +213,18 @@
       },
       "Recent": {
         "type": "object",
+        "required": [
+          "team_id",
+          "side",
+          "tournament",
+          "round_id",
+          "opponent",
+          "team_name",
+          "team_display_name",
+          "school_name",
+          "school_display_name",
+          "updated_at"
+        ],
         "properties": {
           "team_id": {
             "type": "integer",
@@ -224,8 +236,9 @@
           "tournament": {
             "type": "string"
           },
-          "round": {
-            "type": "string"
+          "round_id": {
+            "type": "integer",
+            "minimum": 1
           },
           "opponent": {
             "type": "string"
@@ -260,7 +273,9 @@
           "opponent",
           "judge",
           "report",
-          "team_id"
+          "team_id",
+          "created_at",
+          "updated_at"
         ],
         "properties": {
           "round_id": {
@@ -307,6 +322,12 @@
           "external_id": {
             "type": "integer",
             "nullable": true
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
           }
         }
       },
@@ -1944,7 +1965,10 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/Recent"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Recent"
+                  }
                 }
               }
             }

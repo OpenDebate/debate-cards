@@ -36,10 +36,11 @@ export function pipe(...fns: Function[]) {
   return (x: any) => fns.reduce(async (y, fn) => fn(await y), x);
 }
 
+type CaselistQueue = 'openevQueue' | 'caselistQueue' | 'schoolQueue' | 'teamQueue' | 'opensourceQueue' | 'updateQueue';
 export type QueueType =
   | typeof parserModule['queue']
   | typeof deduplicationModule['queue']
-  | typeof caselistModule['openevQueue' | 'caselistQueue' | 'schoolQueue' | 'teamQueue' | 'opensourceQueue'];
+  | typeof caselistModule[CaselistQueue];
 export type QueueDataType<Q> = Q extends ActionQueue<infer U, any, any> ? U : never;
 export type ExtractQueueName<Q> = Q extends ActionQueue<any, infer U, any> ? U : never;
 export type ExtractLoadArgs<Q> = Q extends ActionQueue<any, any, infer U> ? U : never;
