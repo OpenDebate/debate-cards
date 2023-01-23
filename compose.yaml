@@ -32,7 +32,7 @@ services:
       - 6379:6379
     expose:
       - 6379
-    volumes: 
+    volumes:
       - redis:/data
   pgsync:
     build:
@@ -44,9 +44,9 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy   
+        condition: service_healthy
       migrate:
-        condition: service_completed_successfully   
+        condition: service_completed_successfully
     environment:
       - PG_USER=${POSTGRES_USER}
       - PG_HOST=postgres
@@ -64,7 +64,7 @@ services:
       - redis
     env_file: .env
     ports:
-      - 5555:5555 # Prisma studio port
+      - 9229:9229 # Debugging
     profiles:
       - tasks # Dont start by default
     volumes:
@@ -78,12 +78,14 @@ services:
     env_file: .env
     ports:
       - 4000:4000
+      - 5555:5555 # Prisma studio port
+      - 9230:9230 # Debugging
     expose:
       - 4000
     volumes:
       - ./src:/app/src
   migrate:
-    build: 
+    build:
       context: .
       dockerfile: ./prisma/Dockerfile
     depends_on:

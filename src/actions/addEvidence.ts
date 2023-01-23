@@ -8,20 +8,12 @@ export const onAddEvidence = new TypedEvent<{ gid: string }>();
 
 export default async (data: EvidenceData): Promise<void> => {
   const evidence = await db.evidence.upsert({
-    where: {
-      gid: data.gid,
-    },
+    where: { gid: data.gid },
     create: {
       ...omit(data, 'file', 'index'),
-      file: {
-        connect: {
-          gid: data.file.gid,
-        },
-      },
+      file: { connect: { gid: data.file.gid } },
     },
-    update: {
-      ...omit(data, 'file', 'index'),
-    },
+    update: { ...omit(data, 'file', 'index') },
     select: { gid: true },
   });
 

@@ -1,5 +1,5 @@
 # Designed for development, for production you would copy the built files from this container
-FROM node:18
+FROM node:19.3.0
 
 WORKDIR /app
 

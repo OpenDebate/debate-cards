@@ -10,12 +10,12 @@
     "start:tasks": "node --inspect=0.0.0.0:9229 ./build/tasks",
     "start:api": "node --inspect=0.0.0.0:9230 ./build/modules/api",
     "dev": "ts-node-dev --poll --respawn -r tsconfig-paths/register ./src/",
-    "dev:api": "ts-node-dev --transpile-only --poll --respawn -r tsconfig-paths/register ./src/modules/api"
+    "dev:api": "ts-node-dev --transpile-only --poll --respawn --inspect=0.0.0.0:9230 -r tsconfig-paths/register ./src/modules/api"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^8.2.1",
     "@openapitools/openapi-generator-cli": "^2.5.1",
-    "@prisma/client": "^3.8.1",
+    "@prisma/client": "^4.9.0",
     "apollo-server-express": "^3.10.2",
     "cheerio": "1.0.0-rc.3",
     "class-validator": "^0.13.2",
@@ -30,8 +30,9 @@
     "limiter": "^2.1.0",
     "lodash": "^4.17.15",
     "pm2-axon": "^4.0.1",
+    "prisma": "^4.9.0",
     "rate-limiter-flexible": "^2.3.11",
-    "redis": "^4.0.4",
+    "redis": "^4.3.1",
     "reflect-metadata": "^0.1.13",
     "request": "^2.88.2",
     "type-graphql": "^1.1.1",
@@ -56,7 +57,6 @@
     "eslint-plugin-type-graphql": "^1.0.0",
     "jest": "^26.6.3",
     "prettier": "^2.0.5",
-    "prisma": "^3.8.1",
     "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^3.12.0",
     "tscpaths": "^0.0.9",
