@@ -1,0 +1,2018 @@
+{
+  "openapi": "3.0.2",
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "info": {
+    "title": "Caselist API v1",
+    "version": "1.0.0"
+  },
+  "components": {
+    "schemas": {
+      "Err": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "description": "Error message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "Caselist": {
+        "type": "object",
+        "required": [
+          "caselist_id",
+          "name",
+          "display_name",
+          "year",
+          "event",
+          "level",
+          "team_size",
+          "archived"
+        ],
+        "properties": {
+          "caselist_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "event": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "team_size": {
+            "type": "integer"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "archive_url": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "Cite": {
+        "type": "object",
+        "required": [
+          "cite_id",
+          "title",
+          "cites",
+          "round_id"
+        ],
+        "properties": {
+          "cite_id": {
+            "type": "integer"
+          },
+          "round_id": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "cites": {
+            "type": "string"
+          }
+        }
+      },
+      "Login": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "remember": {
+            "type": "boolean"
+          }
+        }
+      },
+      "School": {
+        "type": "object",
+        "required": [
+          "school_id",
+          "name",
+          "caselist_id",
+          "display_name",
+          "archived"
+        ],
+        "properties": {
+          "school_id": {
+            "type": "integer"
+          },
+          "caselist_id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "format": "^[A-Za-z0-9 -]"
+          },
+          "display_name": {
+            "type": "string",
+            "format": "^[A-Za-z0-9 -]"
+          },
+          "state": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "nullable": true
+          },
+          "chapter_id": {
+            "type": "integer"
+          },
+          "archived": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Team": {
+        "type": "object",
+        "required": [
+          "team_id",
+          "school_id",
+          "name",
+          "display_name",
+          "debater1_first",
+          "debater1_last",
+          "archived"
+        ],
+        "properties": {
+          "team_id": {
+            "type": "integer"
+          },
+          "school_id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "debater1_first": {
+            "type": "string"
+          },
+          "debater1_last": {
+            "type": "string"
+          },
+          "debater1_student_id": {
+            "type": "integer"
+          },
+          "debater2_first": {
+            "type": "string"
+          },
+          "debater2_last": {
+            "type": "string"
+          },
+          "debater2_student_id": {
+            "type": "integer"
+          },
+          "debater3_first": {
+            "type": "string"
+          },
+          "debater3_last": {
+            "type": "string"
+          },
+          "debater3_student_id": {
+            "type": "integer"
+          },
+          "debater4_first": {
+            "type": "string"
+          },
+          "debater4_last": {
+            "type": "string"
+          },
+          "debater4_student_id": {
+            "type": "integer"
+          },
+          "archived": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Recent": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "side": {
+            "type": "string"
+          },
+          "tournament": {
+            "type": "string"
+          },
+          "round": {
+            "type": "string"
+          },
+          "opponent": {
+            "type": "string"
+          },
+          "opensource": {
+            "type": "string"
+          },
+          "team_name": {
+            "type": "string"
+          },
+          "team_display_name": {
+            "type": "string"
+          },
+          "school_name": {
+            "type": "string"
+          },
+          "school_display_name": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "Round": {
+        "type": "object",
+        "required": [
+          "round_id",
+          "side",
+          "tournament",
+          "round",
+          "opponent",
+          "judge",
+          "report",
+          "team_id"
+        ],
+        "properties": {
+          "round_id": {
+            "type": "integer"
+          },
+          "team_id": {
+            "type": "integer"
+          },
+          "side": {
+            "type": "string"
+          },
+          "tournament": {
+            "type": "string"
+          },
+          "round": {
+            "type": "string"
+          },
+          "opponent": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 255
+          },
+          "judge": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 255
+          },
+          "report": {
+            "type": "string",
+            "nullable": true
+          },
+          "opensource": {
+            "type": "string",
+            "nullable": true
+          },
+          "video": {
+            "type": "string",
+            "nullable": true
+          },
+          "tourn_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "external_id": {
+            "type": "integer",
+            "nullable": true
+          }
+        }
+      },
+      "TabroomChapter": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "TabroomRound": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "tournament": {
+            "type": "string"
+          },
+          "round": {
+            "type": "string"
+          },
+          "side": {
+            "type": "string"
+          },
+          "opponent": {
+            "type": "string"
+          },
+          "judge": {
+            "type": "string"
+          },
+          "start_time": {
+            "type": "string"
+          },
+          "share": {
+            "type": "string"
+          }
+        }
+      },
+      "TabroomStudent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "first": {
+            "type": "string"
+          },
+          "last": {
+            "type": "string"
+          }
+        }
+      },
+      "TabroomLink": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          }
+        }
+      },
+      "File": {
+        "type": "object",
+        "properties": {
+          "openev_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "camp": {
+            "type": "string"
+          },
+          "lab": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          }
+        }
+      },
+      "Update": {
+        "type": "object"
+      },
+      "Updates": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/Update"
+        },
+        "minItems": 1
+      },
+      "SearchResult": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "shard": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "responses": {
+      "ErrorResponse": {
+        "description": "Error",
+        "content": {
+          "*/*": {
+            "schema": {
+              "$ref": "#/components/schemas/Err"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "caselist_token"
+      }
+    }
+  },
+  "paths": {
+    "/tabroom/students": {
+      "parameters": [],
+      "get": {
+        "summary": "Returns list of students linked to a user on Tabroom",
+        "operationId": "getTabroomStudents",
+        "responses": {
+          "200": {
+            "description": "Students",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TabroomStudent"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/tabroom/rounds": {
+      "parameters": [],
+      "get": {
+        "summary": "Returns list of rounds linked to a user or slug on Tabroom",
+        "operationId": "getTabroomRounds",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "slug",
+            "description": "Slug of page to match rounds",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rounds",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TabroomRound"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/tabroom/link": {
+      "parameters": [],
+      "post": {
+        "summary": "Creates a tabroom link",
+        "operationId": "postTabroomLink",
+        "requestBody": {
+          "description": "The link to create",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/TabroomLink"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created link",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TabroomLink"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/tabroom/chapters": {
+      "parameters": [],
+      "get": {
+        "summary": "Returns list of chapters linked to a user on Tabroom",
+        "operationId": "getTabroomChapters",
+        "responses": {
+          "200": {
+            "description": "Chapters",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TabroomChapter"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/status": {
+      "parameters": [],
+      "get": {
+        "summary": "Responds with a 200 if up",
+        "operationId": "getStatus",
+        "responses": {
+          "200": {
+            "description": "Server is up",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [],
+        "tags": [
+          "status"
+        ]
+      },
+      "post": {
+        "summary": "Responds with a 200 if up",
+        "operationId": "postStatus",
+        "responses": {
+          "200": {
+            "description": "Server is up",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [],
+        "tags": [
+          "status"
+        ]
+      },
+      "put": {
+        "summary": "Responds with a 200 if up",
+        "operationId": "putStatus",
+        "responses": {
+          "200": {
+            "description": "Server is up",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [],
+        "tags": [
+          "status"
+        ]
+      },
+      "patch": {
+        "summary": "Responds with a 200 if up",
+        "operationId": "patchStatus",
+        "responses": {
+          "200": {
+            "description": "Server is up",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [],
+        "tags": [
+          "status"
+        ]
+      },
+      "delete": {
+        "summary": "Responds with a 200 if up",
+        "operationId": "deleteStatus",
+        "responses": {
+          "200": {
+            "description": "Server is up",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [],
+        "tags": [
+          "status"
+        ]
+      }
+    },
+    "/search": {
+      "parameters": [],
+      "get": {
+        "summary": "Returns search results",
+        "operationId": "getSearch",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "description": "Search query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shard",
+            "description": "Shard to search in",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search result",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/openev": {
+      "parameters": [],
+      "get": {
+        "summary": "Returns files for an open evidence year",
+        "operationId": "getFiles",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "description": "What year to return files in",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Files",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/File"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Creates an OpenEv file",
+        "operationId": "postFile",
+        "requestBody": {
+          "description": "The file to upload",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/File"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created file",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/File"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/login": {
+      "parameters": [],
+      "post": {
+        "summary": "Logs in",
+        "operationId": "postLogin",
+        "requestBody": {
+          "description": "The username and password",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Logged in",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Login"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": []
+      }
+    },
+    "/download": {
+      "parameters": [],
+      "get": {
+        "summary": "Downloads a file",
+        "operationId": "getDownload",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "path",
+            "description": "Which file to download",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/caselists": {
+      "parameters": [],
+      "get": {
+        "summary": "Returns list of caselists",
+        "operationId": "getCaselists",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "archived",
+            "description": "Whether to return archived caselists",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Caselists",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Caselist"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/openev/{id}": {
+      "parameters": [],
+      "delete": {
+        "summary": "Deletes a file",
+        "operationId": "deleteFile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "description": "File ID to delete",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted file",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/File"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/caselists/{caselist}/schools/{school}/teams/{team}/rounds/{round}": {
+      "parameters": [],
+      "get": {
+        "summary": "Returns a single round",
+        "operationId": "getRound",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Which caselist to return round in",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "school",
+            "description": "Which school round belongs to",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "team",
+            "description": "Which team to return round for",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "round",
+            "description": "Which round to return",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Round",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Round"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "put": {
+        "summary": "Updates a round",
+        "operationId": "putRound",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Caselist",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "school",
+            "description": "School",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "team",
+            "description": "Team",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "round",
+            "description": "Round",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The round to update",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/Round"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated round",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Round"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Deletes a round",
+        "operationId": "deleteRound",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Caselist",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "school",
+            "description": "School",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "team",
+            "description": "Team",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "round",
+            "description": "Round",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted round",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Round"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/caselists/{caselist}/schools/{school}/teams/{team}/rounds": {
+      "parameters": [],
+      "get": {
+        "summary": "Returns list of rounds for a team",
+        "operationId": "getRounds",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Which caselist to return schools in",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "school",
+            "description": "Which school to return teams in",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "team",
+            "description": "Which team to return rounds in",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "side",
+            "description": "Which side to return rounds for",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rounds",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Round"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Creates a round",
+        "operationId": "postRound",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Caselist",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "school",
+            "description": "School",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "team",
+            "description": "Team",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The round to create",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/Round"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created round",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Round"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/caselists/{caselist}/schools/{school}/teams/{team}/cites/{cite}": {
+      "parameters": [],
+      "delete": {
+        "summary": "Deletes a cite",
+        "operationId": "deleteCite",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Caselist",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "school",
+            "description": "School",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "team",
+            "description": "Team",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "cite",
+            "description": "Cite",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted cite",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cite"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/caselists/{caselist}/schools/{school}/teams/{team}/cites": {
+      "parameters": [],
+      "get": {
+        "summary": "Returns list of cites for a team",
+        "operationId": "getCites",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Which caselist to return schools in",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "school",
+            "description": "Which school to return teams in",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "team",
+            "description": "Which team to return cites in",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "side",
+            "description": "Which side to return cites for",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cites",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Cite"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Creates a cite",
+        "operationId": "postCite",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Caselist",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "school",
+            "description": "School",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "team",
+            "description": "Team",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The cite to create",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/Cite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created cite",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cite"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/caselists/{caselist}/schools/{school}/teams/{team}": {
+      "parameters": [],
+      "get": {
+        "summary": "Returns a single team",
+        "operationId": "getTeam",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Which caselist to return schools in",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "school",
+            "description": "Which school team belongs to",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "team",
+            "description": "Which team to return",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Team"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "patch": {
+        "summary": "Patches a team",
+        "operationId": "patchTeam",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Caselist",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "school",
+            "description": "School",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "team",
+            "description": "Team",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The patch operation for the team",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/Updates"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Team updated",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Team"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Deletes a team",
+        "operationId": "deleteTeam",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Caselist",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "school",
+            "description": "School",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "team",
+            "description": "Team",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted team",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Team"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/caselists/{caselist}/schools/{school}/teams": {
+      "parameters": [],
+      "get": {
+        "summary": "Returns list of teams in a school",
+        "operationId": "getTeams",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Which caselist to return schools in",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "school",
+            "description": "Which school to return teams in",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Teams",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Team"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Creates a team",
+        "operationId": "postTeam",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Caselist",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "school",
+            "description": "School",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The team to create",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/Team"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created team",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Team"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/caselists/{caselist}/schools/{school}": {
+      "parameters": [],
+      "get": {
+        "summary": "Returns a school",
+        "operationId": "getSchool",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Which caselist to return school in",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "school",
+            "description": "Which school to return",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "School",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/School"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/caselists/{caselist}/schools": {
+      "parameters": [],
+      "get": {
+        "summary": "Returns list of schools in a caselist",
+        "operationId": "getSchools",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Which caselist to return schools in",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schools",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/School"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Creates a school",
+        "operationId": "postSchool",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Caselist",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The school to create",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/School"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created school",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/School"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/caselists/{caselist}/recent": {
+      "parameters": [],
+      "get": {
+        "summary": "Returns recent modifications in a caselist",
+        "operationId": "getRecent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Which caselist to get modifications for",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recent rounds",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recent"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/caselists/{caselist}": {
+      "parameters": [],
+      "get": {
+        "summary": "Returns a caselist",
+        "operationId": "getCaselist",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caselist",
+            "description": "Which caselist to return",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Caselist",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Caselist"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "cookie": []
+    }
+  ],
+  "x-express-openapi-additional-middleware": [
+    null,
+    null,
+    null,
+    null
+  ],
+  "tags": [
+    {
+      "name": "status"
+    }
+  ]
+}

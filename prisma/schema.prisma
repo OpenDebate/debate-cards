@@ -15,11 +15,6 @@ model EvidenceBucket {
   root   Evidence @relation("root", fields: [rootId], references: [id])
 
   evidence Evidence[] @relation("evidence")
-
-  // evidence   Evidence[]
-  // evidenceId Int?
-  // Evidence   Evidence? @relation(fields: [evidenceId], references: [id])
-  // evidenceId Int?
 }
 
 model Evidence {
@@ -58,22 +53,11 @@ model File {
   path   String
   status FileStatus @default(PENDING)
 
-  evidenceSet   EvidenceSet? @relation(fields: [evidenceSetId], references: [id])
-  evidenceSetId Int?
+  round   Round? @relation(fields: [roundId], references: [id])
+  roundId Int?   @unique
 
   evidence Evidence[]
   tags     Tags[]
-}
-
-model EvidenceSet {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  name  String
-  label String
-
-  files File[]
 }
 
 enum FileStatus {
@@ -88,9 +72,109 @@ model Tags {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name  String
+  name  String @unique
   label String
 
-  file   File @relation(fields: [fileId], references: [id])
-  fileId Int
+  files File[]
+}
+
+model Caselist {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  caselistId  Int     @unique
+  name        String  @unique
+  displayName String
+  year        Int
+  event       String
+  level       String
+  teamSize    Int
+  archived    Boolean
+  archiveUrl  String?
+
+  schools School[]
+}
+
+model School {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  schoolId    Int     @unique
+  name        String
+  displayName String
+  state       String?
+  chapterId   Int?
+  archived    Boolean
+
+  caselist   Caselist @relation(fields: [caselistId], references: [caselistId])
+  caselistId Int
+
+  teams Team[]
+}
+
+model Team {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teamId            Int     @unique
+  name              String
+  displayName       String
+  notes             String?
+  debater1First     String
+  debater1Last      String
+  debater1StudentId Int?
+  debater2First     String?
+  debater2Last      String?
+  debater2StudentId Int?
+  debater3First     String?
+  debater3Last      String?
+  debater3StudentId Int?
+  debater4First     String?
+  debater4Last      String?
+  debater4StudentId Int?
+  archived          Boolean
+
+  school   School @relation(fields: [schoolId], references: [schoolId])
+  schoolId Int
+
+  rounds Round[]
+}
+
+model Round {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  roundId        Int     @unique
+  side           String
+  tournament     String
+  round          String
+  opponent       String
+  judge          String
+  report         String
+  opensourcePath String?
+  opensource     File?
+  video          String?
+  tournId        Int?
+  externalId     Int?
+
+  team   Team   @relation(fields: [teamId], references: [teamId])
+  teamId Int
+  cites  Cite[]
+}
+
+model Cite {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  citeId Int    @unique
+  title  String
+  cites  String
+
+  round   Round @relation(fields: [roundId], references: [roundId])
+  roundId Int
 }

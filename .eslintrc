@@ -41,5 +41,6 @@
     // ],
     // "no-console": 0,
     "@typescript-eslint/no-explicit-any": "off"
-  }
+  },
+  "ignorePatterns": ["src/constants/caselist/**/*"]
 }

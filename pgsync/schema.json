@@ -28,18 +28,6 @@
                 "fileId",
                 "bucketId"
             ],
-            "children": [
-                {
-                    "table": "File",
-                    "columns": [
-                        "evidenceSetId"
-                    ],
-                    "relationship": {
-                        "variant": "object",
-                        "type": "one_to_many"
-                    }
-                }
-            ],
             "transform": {
                 "mapping": {
                     "id": {
