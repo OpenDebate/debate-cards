@@ -6,7 +6,12 @@ interface CustomNodeJsGlobal extends NodeJS.Global {
 }
 
 declare const global: CustomNodeJsGlobal;
-export const redis = global.redis || createClient();
+export const redis =
+  global.redis ||
+  createClient({
+    url: 'redis://redis:6379',
+    password: process.env.REDIS_PASSWORD,
+  });
 redis.connect();
 
 export type SentenceMatch = { cardId: number; index: number };

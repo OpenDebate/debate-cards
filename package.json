@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "prestart": "npm run build",
+    "prestart": "npx prisma migrate deploy",
     "start": "node ./build",
     "dev": "ts-node-dev --respawn -r tsconfig-paths/register ./src/",
     "build": "tsc --project tsconfig.json && tscpaths -p tsconfig.json -s ./src -o ./build",
@@ -29,7 +29,6 @@
     "@types/cheerio": "^0.22.21",
     "@types/jest": "^26.0.20",
     "@types/lodash": "^4.14.157",
-    "@types/mongoose": "^5.7.30",
     "@types/node": "^14.0.19",
     "@types/unzipper": "^0.10.4",
     "@typescript-eslint/eslint-plugin": "^3.6.0",

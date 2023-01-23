@@ -6,7 +6,6 @@ yarn-error.log
 .env
 .DS_Store
 prisma/dev.*
-prisma/migrations
 .yarn/*
 !.yarn/cache
 !.yarn/patches
@@ -16,3 +15,4 @@ prisma/migrations
 !.yarn/versions
 *.docx
 *.html
+tmp

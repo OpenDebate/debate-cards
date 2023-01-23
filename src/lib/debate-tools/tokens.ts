@@ -37,6 +37,8 @@ export const tokensToMarkup = (textBlocks: TextBlock[]): string => {
     });
     dom += `</${domElement}>`;
   });
+  // Make sure to close tags
+  for (const style in state) if (state[style]) dom += `</${styleMap[style]?.domElement}>`;
 
   return dom;
 };
