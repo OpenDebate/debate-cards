@@ -1,4 +1,4 @@
-import { createStyleParser, createTokenizer, StyleData, TextBlock } from './';
+import { createStyleParser, createTokenizer, StyleRecord, TextBlock } from './';
 import { simplifyTokens, tokensToMarkup } from './tokens';
 import { ParseOne } from 'unzipper';
 import { createReadStream } from 'fs';
@@ -13,7 +13,7 @@ interface TokensOption {
   2 - tokenize document.xml and pull info on named styles from styles.xml
 */
 export const documentToTokens = async (filepath: string, options?: TokensOption): Promise<TextBlock[]> => {
-  const styleData = await new Promise<StyleData>((resolve, reject) =>
+  const styleData = await new Promise<StyleRecord>((resolve, reject) =>
     pipeline([createReadStream(filepath), ParseOne(/styles\.xml$/), createStyleParser(resolve, reject)]).catch(reject),
   );
   const blocks = await new Promise<TextBlock[]>((resolve, reject) =>
