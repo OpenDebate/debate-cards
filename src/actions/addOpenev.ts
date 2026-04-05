@@ -4,7 +4,7 @@ import { connectOrCreateTag, TagInput } from 'app/lib';
 import addFile from './addFile';
 import downloadFile from './downloadFile';
 
-export default async (data: ModelFile): Promise<void> => {
+export default async (data: ModelFile): Promise<{ gid: string }> => {
   await downloadFile(data.path);
   const campName = CAMP_NAMES[data.camp] ?? data.camp;
   const tags: TagInput[] = [
@@ -25,7 +25,7 @@ export default async (data: ModelFile): Promise<void> => {
     }
   if (!tags.find((tag) => tag.name === 'ld')) tags.push({ name: 'cx', label: 'Policy' });
 
-  return addFile({
+  return await addFile({
     name: data.name,
     path: `./documents/${data.path}`,
     tags: { connectOrCreate: tags.map(connectOrCreateTag) },

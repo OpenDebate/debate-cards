@@ -1,11 +1,21 @@
-import { IPC_PORT } from 'app/constants';
-import type { QueueDataTypes, QueueLoadArgs, QueueName } from 'app/lib';
-import { queueRequest } from 'app/lib/socket';
-import axon from 'pm2-axon';
-import { Arg, Args, Authorized, Field, FieldResolver, Mutation, ObjectType, Query, Resolver } from 'type-graphql';
-import { QueueModels } from '../models';
-const requestSocket = axon.socket('req');
-requestSocket.bind(IPC_PORT);
+import { Queue } from 'bullmq';
+import { connection } from 'app/lib/queues/connection';
+import { Arg, Args, Authorized, Field, Mutation, ObjectType, Query, Resolver } from 'type-graphql';
+import * as QueueInputs from '../inputs/queues';
+
+// Create BullMQ Queue references for reading stats (no workers needed in API process)
+const queues: Record<string, Queue> = {
+  parse: new Queue('parse', { connection }),
+  dedup: new Queue('dedup', { connection }),
+  openev: new Queue('openev', { connection }),
+  caselist: new Queue('caselist', { connection }),
+  school: new Queue('school', { connection }),
+  team: new Queue('team', { connection }),
+  opensource: new Queue('opensource', { connection }),
+  update: new Queue('update', { connection }),
+};
+
+type QueueName = keyof typeof queues;
 
 @ObjectType()
 class LoadResults {
@@ -13,100 +23,107 @@ class LoadResults {
   size: number;
 }
 
-const createQueueResolver = <N extends QueueName>(queueName: N) => {
-  const { taskType, loadInput } = QueueModels[queueName];
-  const capitalizedQueueName = queueName.charAt(0).toUpperCase() + queueName.slice(1);
-  @ObjectType(capitalizedQueueName + 'Queue') // Type name is uppercase of query name
-  class QueueType {
-    @Field((type) => [taskType])
-    tasks: QueueDataTypes[N][];
+@ObjectType()
+class QueueInfo {
+  @Field()
+  name: string;
 
-    @Field((type) => String)
-    name: N;
+  @Field()
+  waiting: number;
 
-    @Field()
-    length: number;
+  @Field()
+  active: number;
+
+  @Field()
+  completed: number;
+
+  @Field()
+  failed: number;
+
+  @Field()
+  delayed: number;
+}
+
+@Resolver()
+export class QueueStatsResolver {
+  @Query(() => [QueueInfo])
+  @Authorized('ADMIN')
+  async queueStats(): Promise<QueueInfo[]> {
+    const stats: QueueInfo[] = [];
+    for (const [name, queue] of Object.entries(queues)) {
+      const counts = await queue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed');
+      stats.push({
+        name,
+        waiting: counts.waiting,
+        active: counts.active,
+        completed: counts.completed,
+        failed: counts.failed,
+        delayed: counts.delayed,
+      });
+    }
+    return stats;
   }
 
-  @Resolver(QueueType, { isAbstract: true })
-  abstract class QueueResolver {
-    @Query((returns) => QueueType)
-    @Authorized('ADMIN')
-    async [queueName + 'Queue']() {
-      return { name: queueName };
-    }
-
-    @FieldResolver()
-    async tasks(
-      @Arg('take', { nullable: true }) take: number,
-      @Arg('skip', { defaultValue: 0 }) skip: number,
-    ): Promise<QueueDataTypes[N][]> {
-      return queueRequest(requestSocket, { queueName, action: 'tasks', args: { skip, take } });
-    }
-
-    @FieldResolver()
-    async length(): Promise<number> {
-      const length = await queueRequest(requestSocket, { queueName, action: 'length' }, 1000);
-      // IPC library turns 0 into null :)
-      return length ?? 0;
-    }
-
-    @Mutation(() => LoadResults)
-    @Authorized('ADMIN')
-    async [`load${capitalizedQueueName}Queue`](
-      @Args(() => loadInput) args: QueueLoadArgs[N],
-    ): Promise<{ size: number }> {
-      try {
-        return { size: (await queueRequest(requestSocket, { queueName, action: 'load', args }, 10 * 60 * 1000)) ?? 0 };
-      } catch (err) {
-        throw new Error(
-          `Failed to load data: ${
-            err.name === 'HttpError' ? err.body.message : err.message ?? JSON.stringify(err, null, 2)
-          }`,
-        );
-      }
-    }
-
-    @Mutation(() => Number)
-    @Authorized('ADMIN')
-    async [`clear${capitalizedQueueName}Queue`](): Promise<number> {
-      return (await queueRequest(requestSocket, { queueName, action: 'clear' })) ?? 0;
-    }
+  @Query(() => QueueInfo)
+  @Authorized('ADMIN')
+  async queueInfo(@Arg('name') name: string): Promise<QueueInfo> {
+    const queue = queues[name];
+    if (!queue) throw new Error(`No queue with name ${name}`);
+    const counts = await queue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed');
+    return {
+      name,
+      waiting: counts.waiting,
+      active: counts.active,
+      completed: counts.completed,
+      failed: counts.failed,
+      delayed: counts.delayed,
+    };
   }
-  return QueueResolver;
-};
 
-@Resolver()
-class ParseQueueResolver extends createQueueResolver('parse') {}
+  @Mutation(() => LoadResults)
+  @Authorized('ADMIN')
+  async loadCaselistQueue(@Args(() => QueueInputs.CaselistLoadInput) args: QueueInputs.CaselistLoadInput) {
+    const { loadCaselists } = await import('app/modules/caselist/flow');
+    return { size: await loadCaselists(args) };
+  }
 
-@Resolver()
-class DedupQueueResolver extends createQueueResolver('dedup') {}
+  @Mutation(() => LoadResults)
+  @Authorized('ADMIN')
+  async loadOpenevQueue(@Args(() => QueueInputs.OpenevLoadInput) args: QueueInputs.OpenevLoadInput) {
+    const { loadOpenev } = await import('app/modules/caselist/flow');
+    return { size: await loadOpenev(args.years) };
+  }
 
-@Resolver()
-class OpenevQueueResolver extends createQueueResolver('openev') {}
+  @Mutation(() => LoadResults)
+  @Authorized('ADMIN')
+  async loadUpdateQueue(@Args(() => QueueInputs.UpdateLoadInput) args: QueueInputs.UpdateLoadInput) {
+    const { loadUpdates } = await import('app/modules/caselist/flow');
+    return { size: await loadUpdates(args.caselists) };
+  }
 
-@Resolver()
-class CaselistQueueResolver extends createQueueResolver('caselist') {}
+  @Mutation(() => LoadResults)
+  @Authorized('ADMIN')
+  async loadParseQueue(@Args(() => QueueInputs.ParseLoadInput) args: QueueInputs.ParseLoadInput) {
+    const { loadParseJobs } = await import('app/modules/parser/flow');
+    return { size: await loadParseJobs(args) };
+  }
 
-@Resolver()
-class SchoolQueueResolver extends createQueueResolver('school') {}
+  @Mutation(() => LoadResults)
+  @Authorized('ADMIN')
+  async loadDedupQueue(@Args(() => QueueInputs.DedupLoadInput) args: QueueInputs.DedupLoadInput) {
+    const { loadDedupJobs } = await import('app/modules/deduplicator/flow');
+    return { size: await loadDedupJobs(args) };
+  }
 
-@Resolver()
-class TeamQueueResolver extends createQueueResolver('team') {}
+  @Mutation(() => Number)
+  @Authorized('ADMIN')
+  async clearQueue(@Arg('name') name: string): Promise<number> {
+    const queue = queues[name];
+    if (!queue) throw new Error(`No queue with name ${name}`);
+    const before = await queue.getJobCounts('waiting', 'delayed');
+    await queue.obliterate({ force: true });
+    return before.waiting + before.delayed;
+  }
+}
 
-@Resolver()
-class OpensourceQueueResolver extends createQueueResolver('opensource') {}
-
-@Resolver()
-class UpdateQueueResolver extends createQueueResolver('update') {}
-
-export const QueueResolvers = [
-  ParseQueueResolver,
-  DedupQueueResolver,
-  OpenevQueueResolver,
-  CaselistQueueResolver,
-  SchoolQueueResolver,
-  TeamQueueResolver,
-  OpensourceQueueResolver,
-  UpdateQueueResolver,
-];
+export const QueueResolvers = [QueueStatsResolver];

@@ -1,27 +1,21 @@
-import addFile from 'app/actions/addFile';
-import generateFile from 'app/actions/generateFile';
-// import 'app/modules/parser';
-// import 'app/modules/deduplicator';
-import caselist from './modules/caselist';
-import { db } from './lib';
-import { readdir, writeFile } from 'fs/promises';
+import 'dotenv/config';
+import { loadCaselists } from './modules/caselist/flow';
 
-async function loadDir(dir: string) {
-  const files = (await readdir(dir)).map((file) => ({
-    name: file,
-    path: `${dir}/${file}`,
-  }));
+const caselist = process.argv[2] || 'hspolicy24';
 
-  for (const file of files) await addFile(file);
-}
+// Parse optional key=value args e.g. schoolNameAlphaLimit=D
+const args = Object.fromEntries(
+  process.argv.slice(3).map((arg) => arg.split('=')),
+);
 
-async function makeFile(id: number) {
-  const ids = (
-    await db.evidence.findMany({
-      where: { fileId: id },
-    })
-  ).map((card) => card.id);
-  const file = await generateFile(ids, true);
-  await writeFile('./test.docx', file);
-  console.log('File built');
-}
+(async () => {
+  console.log(`Loading caselist: ${caselist}`, args);
+  const count = await loadCaselists({
+    names: [caselist],
+    schoolNameAlphaLimit: args.schoolNameAlphaLimit,
+    expectCached: args.expectCached === 'true',
+  });
+  console.log(`Enqueued ${count} caselist(s). Jobs will be processed by the task workers.`);
+  // Allow BullMQ to flush, then exit — workers run in tasks.ts
+  setTimeout(() => process.exit(0), 2000);
+})();

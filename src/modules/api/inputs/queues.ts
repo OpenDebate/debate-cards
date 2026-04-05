@@ -1,11 +1,7 @@
-import type parser from 'app/modules/parser';
-import type deduplication from 'app/modules/deduplicator';
-import type caselistModule from 'app/modules/caselist';
-import { ExtractLoadArgs } from 'app/lib';
 import { ArgsType, Field, Int } from 'type-graphql';
 
 @ArgsType()
-export class ParseLoadInput implements ExtractLoadArgs<typeof parser['queue']> {
+export class ParseLoadInput {
   @Field()
   loadPending: boolean;
 
@@ -14,28 +10,29 @@ export class ParseLoadInput implements ExtractLoadArgs<typeof parser['queue']> {
 }
 
 @ArgsType()
-export class DedupLoadInput implements ExtractLoadArgs<typeof deduplication['queue']> {
+export class DedupLoadInput {
   @Field()
   loadPending: boolean;
 
   @Field({ nullable: true })
-  take: number;
+  take?: number;
 
   @Field((type) => [String], { nullable: true })
   gids?: string[];
 }
 
 @ArgsType()
-export class OpenevLoadInput implements ExtractLoadArgs<typeof caselistModule['openevQueue']> {
+export class OpenevLoadInput {
   @Field((type) => [Int], { nullable: true })
   years?: number[];
 }
+
 @ArgsType()
-export class CaselistLoadInput implements ExtractLoadArgs<typeof caselistModule['caselistQueue']> {
-  @Field()
+export class CaselistLoadInput {
+  @Field({ nullable: true })
   archived: boolean;
 
-  @Field()
+  @Field({ nullable: true })
   active: boolean;
 
   @Field((type) => [Int], { nullable: true })
@@ -43,17 +40,25 @@ export class CaselistLoadInput implements ExtractLoadArgs<typeof caselistModule[
 
   @Field((type) => [String], { nullable: true })
   names?: string[];
+
+  @Field({ nullable: true })
+  schoolNameAlphaLimit?: string;
+
+  @Field({ nullable: true })
+  expectCached?: boolean;
 }
+
 @ArgsType()
-export class SchoolLoadInput implements ExtractLoadArgs<typeof caselistModule['schoolQueue']> {
+export class SchoolLoadInput {
   @Field()
   caselist: string;
 
   @Field()
   school: string;
 }
+
 @ArgsType()
-export class TeamLoadInput implements ExtractLoadArgs<typeof caselistModule['teamQueue']> {
+export class TeamLoadInput {
   @Field()
   caselist: string;
 
@@ -63,13 +68,15 @@ export class TeamLoadInput implements ExtractLoadArgs<typeof caselistModule['tea
   @Field()
   team: string;
 }
+
 @ArgsType()
-export class OpensourceLoadInput implements ExtractLoadArgs<typeof caselistModule['opensourceQueue']> {
+export class OpensourceLoadInput {
   @Field()
   loadPending: boolean;
 }
+
 @ArgsType()
-export class UpdateLoadInput implements ExtractLoadArgs<typeof caselistModule['updateQueue']> {
+export class UpdateLoadInput {
   @Field((type) => [String], { nullable: true })
   caselists?: string[];
 }

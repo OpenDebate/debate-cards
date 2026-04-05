@@ -15,4 +15,9 @@ prisma/dev.*
 !.yarn/versions
 *.docx
 *.html
+*.pdf
 tmp
+cache/
+documents/
+logs/
+ANALYSIS.md

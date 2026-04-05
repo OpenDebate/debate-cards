@@ -1,7 +1,7 @@
 import { db } from 'app/lib';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import { dedup, getSentences } from 'app/lib/debate-tools/duplicate';
-import { onAddEvidence } from './addEvidence';
+import { dedupQueue } from 'app/modules/deduplicator/queue';
 
 // Note: Redis updates and postgres updates are atomic, but does not guarantee that if redis was updated so was database
 export default async ({ gid }: { gid: string }): Promise<any> => {
@@ -23,7 +23,7 @@ export default async ({ gid }: { gid: string }): Promise<any> => {
   } catch (err) {
     if (err instanceof PrismaClientKnownRequestError) {
       console.error(`Database error deduping ${gid}, retrying`, err);
-      return onAddEvidence.emit({ gid }); // Retry in case of database error
-    } else throw new Error(`Failed to dedup ${gid}`, { cause: err });
+      await dedupQueue.add(`dedup:${gid}`, { gid }); // Retry in case of database error
+    } else throw new Error(`Failed to dedup ${gid}: ${err.message}`);
   }
 };

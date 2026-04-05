@@ -5,6 +5,7 @@ import { omit } from 'lodash';
 import { EVENT_NAMES } from 'app/constants/caselistNames';
 import { TagInput } from './db';
 import { CaselistPriority } from 'app/constants';
+import { getCachedResponse, setCachedResponse } from './apiCache';
 
 // Every REQUEST_WAIT milliseconds, allow a request through
 type PriorityRequest = { resolve: () => void; priority: CaselistPriority };
@@ -16,11 +17,40 @@ setInterval(() => downloadQueue.dequeue()?.resolve(), 12.5 * 1000);
 export const createPriorityCaselistApi = (priority: CaselistPriority): DefaultApi => {
   const api = new DefaultApi('https://api.opencaselist.com/v1');
   api.setApiKey(DefaultApiApiKeys.cookie, process.env.CASELIST_TOKEN);
+
+  // Rate limiting interceptor
   api.addInterceptor((req) => {
     const queue = req.uri.endsWith('download') ? downloadQueue : requestQueue;
     return new Promise((resolve) => queue.enqueue({ resolve, priority }));
   });
-  return api;
+
+  // Wrap API with a Proxy to cache method responses
+  return new Proxy(api, {
+    get(target, prop: string) {
+      const method = target[prop as keyof DefaultApi];
+      if (typeof method !== 'function') return method;
+
+      // Skip caching for binary downloads — disk-level caching handled by downloadFile
+      if (prop === 'getDownload') return method.bind(target);
+
+      // Wrap async methods to cache responses
+      return async function cachedMethod(...args: any[]) {
+        // Build URI from method name and args for cache key
+        const uri = `${target.basePath}/${prop}/${JSON.stringify(args)}`;
+
+        // Check cache first
+        const cached = await getCachedResponse(uri);
+        if (cached) return cached;
+
+        // Call original method
+        const result = await method.apply(target, args);
+
+        // Cache the response
+        await setCachedResponse(uri, result);
+        return result;
+      };
+    },
+  });
 };
 export const caselistApi = createPriorityCaselistApi(CaselistPriority.BASE);
 export const priorityCaselistApi = createPriorityCaselistApi(CaselistPriority.MAX);

@@ -2,7 +2,7 @@ import { intersection } from 'lodash';
 import { getMatching } from 'app/lib/debate-tools/duplicate';
 import { DynamicKeyEntity, EntityManager, RedisContext } from './redis';
 import { SHOULD_MATCH } from 'app/constants';
-import { onAddEvidence } from 'app/actions/addEvidence';
+import { dedupQueue } from './queue';
 import { db } from 'app/lib';
 
 export interface CardSet {
@@ -116,7 +116,7 @@ class SubBucket implements DynamicKeyEntity<number, Record<string, string>>, Car
 
     // Add card back to processing queue in case it should match a different bucket
     const { gid } = await db.evidence.findUnique({ where: { id }, select: { gid: true } });
-    onAddEvidence.emit({ gid });
+    await dedupQueue.add(`dedup:${gid}`, { gid });
 
     return this.propogateKey();
   }
