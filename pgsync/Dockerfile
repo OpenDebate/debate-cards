@@ -7,5 +7,6 @@ COPY ./pgsync/patches/querybuilder.py /usr/local/lib/python3.10/site-packages/pg
 COPY ./pgsync/patches/transform.py /usr/local/lib/python3.10/site-packages/pgsync/
 
 COPY ./pgsync/start.sh .
+RUN chmod +x start.sh
 COPY ./pgsync/schema.json .
 CMD ["./start.sh"]

@@ -1,0 +1,8 @@
+node_modules
+build
+documents
+cache
+logs
+.env
+.git
+*.docx

@@ -64,6 +64,15 @@ class QueryBuilder(object):
                 through_node: Node = node_b.relationship.through_nodes[0]
                 node_a, node_b = node_b, node_a
 
+            # The changed node can itself be the through table (an insert into
+            # e.g. _FileToTag arrives as a change on the through table). There
+            # is then only one hop to resolve, and asking for the keys between
+            # the through table and itself raises ForeignKeyError.
+            if str(node_b.model.original) == str(through_node.model.original):
+                return get_foreign_keys(node_a, through_node)
+            if str(node_a.model.original) == str(through_node.model.original):
+                return get_foreign_keys(through_node, node_b)
+
             foreign_keys: dict = get_foreign_keys(node_a, through_node)
             for key, value in get_foreign_keys(through_node, node_b).items():
                 if key in foreign_keys:
