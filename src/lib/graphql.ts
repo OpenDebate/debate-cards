@@ -9,4 +9,4 @@ const transformFields = (fields: any) => {
   );
 };
 
-export const selectFields = (info: GraphQLResolveInfo) => ({ id: true, ...transformFields(info) });
+export const selectFields = (info: GraphQLResolveInfo) => ({ id: true, ...transformFields(graphqlFields(info)) });

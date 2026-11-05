@@ -22,8 +22,13 @@ async function main() {
       resolvers.TagResolver,
       ...resolvers.caselistResolvers,
     ],
-    // Temporarily allow all queries (no auth required)
-    authChecker: () => true,
+    // @Authorized() requires any valid token; @Authorized('ADMIN') requires an admin token.
+    // Get one with: mutation { login(password: "$ADMIN_PASSWORD") { token } }
+    authChecker: ({ context }: { context: { auth?: { admin?: boolean } } }, roles) => {
+      if (!context.auth) return false;
+      if (roles.includes('ADMIN')) return !!context.auth.admin;
+      return true;
+    },
     validate: { forbidUnknownValues: false },
   });
 
