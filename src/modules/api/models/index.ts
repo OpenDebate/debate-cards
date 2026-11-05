@@ -4,3 +4,4 @@ export * from './file';
 export * from './caselist';
 export * from './evidenceBucket';
 export * from './queues';
+export * from './search';

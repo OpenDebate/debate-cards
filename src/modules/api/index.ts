@@ -20,6 +20,7 @@ async function main() {
       ...resolvers.QueueResolvers,
 
       resolvers.EvidenceResolver,
+      resolvers.SearchResolver,
       resolvers.FileResolver,
       resolvers.EvidenceBucketResolver,
       resolvers.TagResolver,
@@ -54,6 +55,8 @@ async function main() {
       return { auth: auth(), ip: req.ip };
     },
     plugins: [rateLimitPlugin(schema)],
+    // Without this, outside production, every error response carries a stack trace and file paths
+    debug: process.env.NODE_ENV === 'development',
   });
   await server.start();
   server.applyMiddleware({ app, path: API_PATH });

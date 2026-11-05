@@ -370,3 +370,41 @@ separate sync service):
 
 Optional settings: `SEARCH_INDEX_BATCH` (cards per bulk write, default 500), `SEARCH_REINDEX_BATCH` (default 500),
 `ELASTICSEARCH_INDEX` (alias name, default `evidence`).
+
+## Searching
+
+```graphql
+query {
+  searchEvidence(
+    query: "nuclear war -famine"
+    take: 20
+    skip: 0
+    filters: { all: ["hspolicy24"], any: ["wikiA", "wikiN"], none: ["openev"] }
+  ) {
+    total
+    hits {
+      score
+      evidence { id tag cite markup bucket { count } file { name } }
+      highlights { field fragments }   # fragments wrap matches in <mark>; everything else is HTML-escaped
+    }
+    facets { name buckets { value label count } }
+  }
+}
+```
+
+- **Query syntax.** Every word must match. `"quoted words"` match as a phrase, `-word` excludes, `a | b` means either,
+  `word*` matches prefixes, `( )` groups. Odd input (an unbalanced quote, a trailing `OR`, `AT: spec`) is treated as
+  plain text and never produces an error. Text is stemmed, so "regulation" also finds "regulations" and "regulate".
+  `query` can be left out when `filters` are given, to browse by tag.
+- **Filters** match tag names exactly (case sensitive): `all` needs every tag, `any` at least one, `none` excludes.
+- **Results** are one hit per group of duplicate cards (the best scoring version). `total` counts those groups and
+  `evidence.bucket.count` is how many copies exist. Cards that appear in many rounds are nudged up, gently
+  (`duplicateWeight`, default 0.2, 0 turns it off).
+- **Facets** count matching cards per tag for source (wiki / Open Evidence), side, level, event, year, camp and Open
+  Evidence type. Each count is what `total` becomes if you add that tag to `filters.all`. Pass `facets: false` or
+  `highlight: false` to skip them.
+- **Limits.** `take` is 1 to 100 and `skip + take` cannot pass 10,000; a query is at most 500 characters. The API's
+  query cost limit also caps `take`: with a full card selection (markup, file tags, bucket) about 58 fit in one page.
+  Mistakes come back as a `BAD_USER_INPUT` error with a message safe to show. If Elasticsearch is down the error says
+  search is temporarily unavailable and nothing more.
+- The older `search` query still works (now on the same engine, with no raw Elasticsearch errors) but is deprecated.
