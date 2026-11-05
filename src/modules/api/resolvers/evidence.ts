@@ -35,7 +35,7 @@ export class EvidenceResolver extends createGetResolver('evidence', Evidence, [{
     const filter = tags
       ? {
           terms_set: {
-            'File.tags': {
+            tags: {
               // File.tags is a keyword field, so terms match case-sensitively —
               // lowercasing here silently broke every tag with capitals (camp
               // names like GDI, caselist names, school names).

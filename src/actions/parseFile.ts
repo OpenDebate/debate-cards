@@ -1,5 +1,6 @@
 import addEvidence from 'app/actions/addEvidence';
 import { db, pipe } from 'app/lib';
+import { markDirty } from 'app/modules/search/dirty';
 
 import { documentToTokens, extractCards, makeChildId } from 'app/lib/debate-tools';
 
@@ -16,6 +17,7 @@ export default async ({ gid }: { gid: string }): Promise<{ evidenceGids: string[
       cards.map((card, i) => addEvidence({ ...card, gid: makeChildId(gid, +i), file: { gid } })),
     );
 
+    await markDirty(results.map((r) => r.id)); // new or changed cards need their search document written
     await db.file.update({ where: { gid }, data: { status: 'PROCESSED' } });
     return { evidenceGids: results.map((r) => r.gid) };
   } catch (e) {

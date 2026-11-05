@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { Queue } from 'bullmq';
 import { connection } from 'app/lib/queues/connection';
+import { backlog } from 'app/modules/search/dirty';
 
 const POLL_INTERVAL = 5_000; // 5 seconds
 
@@ -15,6 +16,7 @@ type Snapshot = Record<string, QueueCounts>;
 let startTime: number;
 let lastSnapshot: Snapshot = {};
 let lineCount = 0;
+let searchBacklog = { pending: 0, inflight: 0 };
 // Tracks when each queue last had a change in completed+failed count
 const lastChangeTime: Record<string, number> = {};
 
@@ -82,6 +84,7 @@ function renderTable(current: Snapshot, elapsed: number, now: number): string {
   const secs = Math.floor((elapsed % 60_000) / 1000);
   lines.push('-'.repeat(62));
   lines.push(`${mins}m${secs}s elapsed | ${totalCompleted} completed | ${totalFailed} failed`);
+  lines.push(`search index: ${searchBacklog.pending} cards waiting, ${searchBacklog.inflight} being written`);
 
   return lines.join('\n');
 }
@@ -106,6 +109,7 @@ async function main() {
   const interval = setInterval(async () => {
     const now = Date.now();
     const current = await getSnapshot();
+    searchBacklog = await backlog();
     const elapsed = now - startTime;
 
     for (const name of queueNames) {
