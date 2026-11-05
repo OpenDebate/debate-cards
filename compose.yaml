@@ -3,7 +3,7 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.2.3
     env_file: .env
     environment:
-      - xpack.security.enabled=false # Dont need for now, complicates things a lot
+      - xpack.security.enabled=false
       - discovery.type=single-node
     healthcheck:
       test: curl -s http://elasticsearch:9200 > /dev/null || exit 1
@@ -13,7 +13,7 @@ services:
       - elastic:/usr/share/elasticsearch/data
   postgres:
     image: postgres:14
-    command: postgres -c wal_level=logical -c max_replication_slots=2 # Options for pgsync
+    command: postgres -c wal_level=logical -c max_replication_slots=2
     env_file: .env
     expose:
       - 5432
@@ -34,65 +34,40 @@ services:
       - 6379
     volumes:
       - redis:/data
-  pgsync:
-    build:
-      context: .
-      dockerfile: ./pgsync/Dockerfile
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    environment:
-      - PG_USER=${POSTGRES_USER}
-      - PG_HOST=postgres
-      - PG_PASSWORD=${POSTGRES_PASSWORD}
-      - ELASTICSEARCH_PORT=9200
-      - ELASTICSEARCH_SCHEME=http
-      - ELASTICSEARCH_HOST=elasticsearch
-      - REDIS_HOST=redis
-      - REDIS_AUTH=${REDIS_PASSWORD}
   tasks:
     build: .
     command: npm run start:tasks
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     env_file: .env
     ports:
-      - 9229:9229 # Debugging
+      - 9229:9229
     profiles:
-      - tasks # Dont start by default
+      - tasks
     volumes:
       - ${DOCUMENT_PATH:-./documents}:/app/documents
   api:
     build: .
-    command: npm run dev:api
+    command: node ./build/modules/api
     depends_on:
-      - postgres
-      - elasticsearch
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     env_file: .env
     ports:
       - 4000:4000
-      - 5555:5555 # Prisma studio port
-      - 9230:9230 # Debugging
+      - 5555:5555
+      - 9230:9230
     expose:
       - 4000
     volumes:
       - ./src:/app/src
-  migrate:
-    build:
-      context: .
-      dockerfile: ./prisma/Dockerfile
-    depends_on:
-      - postgres
-    volumes:
-      - ./prisma/migrations:/app/prisma/migrations # Migrations
-      - ./node_modules/.prisma:/app/node_modules/.prisma # Client code
 
 volumes:
   db: {}

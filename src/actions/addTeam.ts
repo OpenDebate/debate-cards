@@ -1,29 +1,33 @@
-import { db, TypedEvent } from 'app/lib';
+import { db } from 'app/lib';
 import { caselistApi, caselistToPrisma } from 'app/lib/caselist';
 import { TeamLoadedEvent } from './addSchool';
 import { OpensourceLoadedEvent } from './addOpensource';
 import addRound from './addRound';
 
-export const onOpensourceLoaded = new TypedEvent<OpensourceLoadedEvent>();
+export type AddTeamResult = {
+  id: number;
+  opensourceEvents: OpensourceLoadedEvent[];
+};
 
-export default async ({ caselist, school, team }: TeamLoadedEvent): Promise<number> => {
+export default async ({ caselist, school, team }: TeamLoadedEvent): Promise<AddTeamResult> => {
   const saved = await db.team.upsert(caselistToPrisma(team, 'teamId', 'schoolId'));
 
   const { body: rounds } = await caselistApi.getRounds(caselist.name, school.name, saved.name);
+  const opensourceEvents: OpensourceLoadedEvent[] = [];
   let updated = false;
-  await Promise.all(
-    rounds.map(async (round) => {
-      const existingRound = await db.round.findUnique({ where: { roundId: round.roundId } });
-      if (existingRound?.caselistUpdatedAt === round.updatedAt) return;
-      updated = true;
-      return addRound({ caselist, school, team, round });
-    }),
-  );
+
+  for (const round of rounds) {
+    const existingRound = await db.round.findUnique({ where: { roundId: round.roundId } });
+    if (existingRound?.caselistUpdatedAt === round.updatedAt) continue;
+    updated = true;
+    const result = await addRound({ caselist, school, team, round });
+    if (result.opensource) opensourceEvents.push(result.opensource);
+  }
 
   if (updated) {
     const { body: cites } = await caselistApi.getCites(caselist.name, school.name, saved.name);
     await Promise.all(cites.map((cite) => cite.cites && db.cite.upsert(caselistToPrisma(cite, 'citeId', 'roundId'))));
   }
 
-  return saved.id;
+  return { id: saved.id, opensourceEvents };
 };

@@ -3,8 +3,8 @@ import { isEmpty, uniq } from 'lodash';
 import { CONCURRENT_DEDUPLICATION } from 'app/constants';
 
 export const redis = createClient({
-  url: 'redis://redis:6379',
-  password: 'password',
+  url: process.env.REDIS_URL || 'redis://localhost:6379',
+  password: process.env.REDIS_PASSWORD || 'password',
   isolationPoolOptions: { max: CONCURRENT_DEDUPLICATION },
 });
 
