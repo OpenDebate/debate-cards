@@ -1,5 +1,5 @@
 import { db } from 'app/lib';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
+import { Prisma } from '@prisma/client';
 import { dedup, getSentences } from 'app/lib/debate-tools/duplicate';
 import { onAddEvidence } from './addEvidence';
 
@@ -21,7 +21,7 @@ export default async ({ gid }: { gid: string }): Promise<any> => {
       ),
     ]);
   } catch (err) {
-    if (err instanceof PrismaClientKnownRequestError) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
       console.error(`Database error deduping ${gid}, retrying`, err);
       return onAddEvidence.emit({ gid }); // Retry in case of database error
     } else throw new Error(`Failed to dedup ${gid}`, { cause: err });
