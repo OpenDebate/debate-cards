@@ -21,6 +21,7 @@ const args = Object.fromEntries(
     const count = await loadCaselists({
       names: [command],
       schoolNameAlphaLimit: args.schoolNameAlphaLimit,
+      expectCached: args.expectCached === 'true',
     });
     console.log(`Enqueued ${count} caselist(s). Jobs will be processed by the task workers.`);
   }

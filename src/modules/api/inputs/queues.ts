@@ -43,6 +43,9 @@ export class CaselistLoadInput {
 
   @Field({ nullable: true })
   schoolNameAlphaLimit?: string;
+
+  @Field({ nullable: true })
+  expectCached?: boolean;
 }
 
 @ArgsType()

@@ -8,6 +8,7 @@ import addTeam from 'app/actions/addTeam';
 import addOpensource from 'app/actions/addOpensource';
 import addOpenev from 'app/actions/addOpenev';
 import processCaselistUpdates from 'app/actions/processCaselistUpdates';
+import { downloadBulkIfAvailable } from 'app/actions/downloadBulk';
 import { schoolQueue, teamQueue, opensourceQueue } from './queue';
 import { parseQueue } from 'app/modules/parser/queue';
 import { attachFailureLogger } from 'app/lib/failureLogger';
@@ -15,8 +16,11 @@ import { attachFailureLogger } from 'app/lib/failureLogger';
 export const caselistWorker = new Worker(
   'caselist',
   async (job: Job) => {
-    const { schoolNameAlphaLimit } = job.data;
+    const { schoolNameAlphaLimit, expectCached } = job.data;
     let { caselist, schools } = await addCaselist(job.data);
+    // Attempt bulk download before processing schools/teams — files on disk
+    // will be skipped by downloadFile's existence check in opensourceWorker
+    await downloadBulkIfAvailable(caselist.name);
 
     // Temporary: filter schools by alphabetical limit for testing
     if (schoolNameAlphaLimit) {
@@ -27,7 +31,7 @@ export const caselistWorker = new Worker(
     await schoolQueue.addBulk(
       schools.map((school) => ({
         name: `school:${school.name}`,
-        data: { caselist, school },
+        data: { caselist, school, expectCached },
       })),
     );
     return { caselistName: caselist.name, schoolCount: schools.length };
@@ -38,7 +42,7 @@ export const caselistWorker = new Worker(
 export const schoolWorker = new Worker(
   'school',
   async (job: Job) => {
-    const { caselist, school } = job.data;
+    const { caselist, school, expectCached } = job.data;
     const { teams } = await addSchool({ caselist, school });
 
     // Filter teams to only include those with pending/updated rounds
@@ -67,7 +71,7 @@ export const schoolWorker = new Worker(
       await teamQueue.addBulk(
         teamsWithUpdates.map((team) => ({
           name: `team:${team.name}`,
-          data: { caselist, school, team },
+          data: { caselist, school, team, expectCached },
         })),
       );
     }
@@ -80,13 +84,13 @@ export const schoolWorker = new Worker(
 export const teamWorker = new Worker(
   'team',
   async (job: Job) => {
-    const { caselist, school, team } = job.data;
+    const { caselist, school, team, expectCached } = job.data;
     const { id, opensourceEvents } = await addTeam({ caselist, school, team });
     if (opensourceEvents.length > 0) {
       await opensourceQueue.addBulk(
         opensourceEvents.map((event) => ({
           name: `opensource:${event.filePath}`,
-          data: event,
+          data: { ...event, expectCached },
         })),
       );
     }
