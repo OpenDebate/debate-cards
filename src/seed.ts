@@ -151,6 +151,7 @@ async function main() {
     errors: await db.file.count({ where: { status: 'ERROR' } }),
   };
   console.log('Database state:', counts);
+  console.log('Seeded cards are not searchable until the search index is rebuilt: run the loader with `reindex`.');
 
   await db.$disconnect();
 }

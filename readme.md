@@ -232,13 +232,12 @@ This starts:
 
 | Service         | Port  | Description                        |
 |-----------------|-------|------------------------------------|
-| `postgres`      | 5432  | Primary database (logical replication on, for pgsync) |
+| `postgres`      | 5432  | Primary database                   |
 | `redis`         | 6379  | BullMQ job queue backend           |
 | `elasticsearch` | 9200  | Full-text search                   |
-| `migrate`       | -     | One-shot: applies the Prisma migrations, then exits. `api`, `tasks` and `pgsync` wait for it |
-| `pgsync`        | -     | Copies evidence from Postgres into Elasticsearch |
+| `migrate`       | -     | One-shot: applies the Prisma migrations, then exits. `api` and `tasks` wait for it |
 | `api`           | 4000  | GraphQL API (`node ./build/modules/api`) |
-| `tasks`         | -     | BullMQ workers: caselist, parse and dedup (`node ./build/tasks.js`) |
+| `tasks`         | -     | BullMQ workers (caselist, parse, dedup) and the search indexer (`node ./build/tasks.js`) |
 
 Postgres, Redis and Elasticsearch are published on `127.0.0.1` only. The `loader` service (profile `tools`) is not started by `up`; run it to enqueue jobs, for example `docker compose run --rm loader openev 2024`.
 
@@ -343,3 +342,31 @@ yarn generate
 ```
 
 This uses the spec at `src/constants/caselistSchema.json` and outputs to `src/constants/caselist/`.
+
+## Search index
+
+Search runs on Elasticsearch, which holds one document per card. The app keeps it up to date itself (there is no
+separate sync service):
+
+- Code that changes a card (parsing a file, dedup moving it into a bucket, a file's tags changing) adds the card's
+  id to a Redis set. The indexer, a loop inside the `tasks` process, takes ids from that set 500 at a time, reads the
+  cards' current state from Postgres and bulk-writes them. A card marked many times is indexed once, and ids that
+  were being written when the process died are put back on restart.
+- Cards are searchable a few seconds after they are indexed. The queue monitor (`node ./build/monitor.js`) prints how many cards are waiting.
+- The index definition (analyzer, field mapping) is in `src/modules/search/mapping.ts`. Text is stemmed and
+  accent-folded, with no stop word list so "no" and "not" still count.
+- Reads and writes go through the `evidence` alias. To rebuild the index from Postgres, for example after changing
+  the mapping or when moving off the old pgsync setup, run:
+
+  ```bash
+  docker compose run --rm loader reindex
+  ```
+
+  It builds a new index next to the live one, swaps the alias over when it is complete and deletes the old index, so
+  search keeps working. Expect roughly 10 minutes per 100k cards. The indexer pauses meanwhile and then applies the
+  changes it held back.
+- Moving from the pgsync setup: run `reindex` once, then drop its leftovers in Postgres with
+  `SELECT pg_drop_replication_slot('debatecards_evidence');` (the slot otherwise keeps write-ahead log files on disk).
+
+Optional settings: `SEARCH_INDEX_BATCH` (cards per bulk write, default 500), `SEARCH_REINDEX_BATCH` (default 500),
+`ELASTICSEARCH_INDEX` (alias name, default `evidence`).

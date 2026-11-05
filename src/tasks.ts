@@ -6,6 +6,7 @@ const WORKER_MODULES: Record<string, () => Record<string, unknown>> = {
   caselist: () => require('./modules/caselist/worker'),
   parser: () => require('./modules/parser/worker'),
   dedup: () => require('./modules/deduplicator/worker'),
+  search: () => require('./modules/search/worker'),
 };
 
 const ALL_MODULES = Object.keys(WORKER_MODULES);

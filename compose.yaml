@@ -26,23 +26,7 @@ services:
       - elastic:/usr/share/elasticsearch/data
   postgres:
     image: postgres:14
-    command:
-      [
-        "postgres",
-        "-c",
-        "wal_level=logical",
-        "-c",
-        "max_wal_senders=2",
-        "-c",
-        "max_replication_slots=2",
-        "-c",
-        "password_encryption=md5",
-      ]
     env_file: .env
-    # pgsync 2.3.2 authenticates with md5 only
-    environment:
-      POSTGRES_HOST_AUTH_METHOD: md5
-      POSTGRES_INITDB_ARGS: --auth-host=md5
     expose:
       - 5432
     healthcheck:
@@ -72,52 +56,6 @@ services:
       postgres:
         condition: service_healthy
 
-  pgsync:
-    # Built locally: upstream pgsync 2.3.2 needs the patches in pgsync/patches
-    build:
-      context: .
-      dockerfile: pgsync/Dockerfile
-    entrypoint: ["sh", "-c", "bootstrap --config ./schema.json && pgsync --config ./schema.json -d"]
-    sysctls:
-      - net.ipv4.tcp_keepalive_time=200
-      - net.ipv4.tcp_keepalive_intvl=200
-      - net.ipv4.tcp_keepalive_probes=5
-    depends_on:
-      postgres:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    environment:
-      PG_USER: ${POSTGRES_USER}
-      PG_HOST: postgres
-      PG_PORT: 5432
-      PG_PASSWORD: ${POSTGRES_PASSWORD}
-      ELASTICSEARCH_HOST: elasticsearch
-      ELASTICSEARCH_PORT: 9200
-      ELASTICSEARCH_SCHEME: http
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_AUTH: ${REDIS_PASSWORD}
-      ELASTICSEARCH: "true"
-      SCHEMA: /app/schema.json
-      QUERY_CHUNK_SIZE: 1000
-      POLL_TIMEOUT: 3
-      LOG_LEVEL: INFO
-      # Evidence docs carry fulltext + markup (~20KB each), so the stock 100MB
-      # bulk chunk and 10s read timeout make elastic time out under load.
-      ELASTICSEARCH_TIMEOUT: 120
-      ELASTICSEARCH_CHUNK_SIZE: 200
-      ELASTICSEARCH_MAX_CHUNK_BYTES: 10485760
-      ELASTICSEARCH_STREAMING_BULK: "true"
-      ELASTICSEARCH_MAX_RETRIES: 3
-    working_dir: /app
-    restart: unless-stopped
-    volumes:
-      - ./pgsync/schema.json:/app/schema.json
   api:
     <<: *app
     command: node ./build/modules/api
@@ -141,6 +79,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
       redis:
         condition: service_healthy
       migrate:
@@ -159,6 +99,10 @@ services:
     entrypoint: ["node", "./build/index.js"]
     command: ["openev", "2024"]
     depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
       redis:
         condition: service_healthy
       migrate:

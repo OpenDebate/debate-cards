@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { loadCaselists, loadOpenev } from './modules/caselist/flow';
 import { connection } from './lib/queues/connection';
+import { reindexAll } from './modules/search/indexer';
 import { caselistQueue, openevQueue, schoolQueue, teamQueue, opensourceQueue, updateQueue } from './modules/caselist/queue';
 
 const command = process.argv[2] || 'hspolicy24';
@@ -11,7 +12,11 @@ const args = Object.fromEntries(
 );
 
 (async () => {
-  if (command === 'openev') {
+  if (command === 'reindex') {
+    // Rebuilds the search index from Postgres and swaps it in. Needed once when moving off pgsync, and after
+    // changing src/modules/search/mapping.ts.
+    await reindexAll();
+  } else if (command === 'openev') {
     const years = process.argv.slice(3).map(Number).filter(Boolean);
     console.log(`Loading openev`, years.length > 0 ? { years } : '(all years)');
     const count = await loadOpenev(years.length > 0 ? years : undefined);

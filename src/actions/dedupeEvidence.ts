@@ -1,4 +1,5 @@
 import { db } from 'app/lib';
+import { markDirty } from 'app/modules/search/dirty';
 import { dedup, getSentences } from 'app/lib/debate-tools/duplicate';
 
 // Note: Redis updates and postgres updates are atomic, but does not guarantee that if redis was updated so was database
@@ -8,7 +9,7 @@ export default async ({ gid }: { gid: string }): Promise<any> => {
     const sentences = getSentences(fulltext);
     const { deletes, updates } = await dedup(id, sentences);
 
-    return await db.$transaction([
+    const result = await db.$transaction([
       db.evidenceBucket.deleteMany({ where: { rootId: { in: deletes } } }),
       ...updates.map(({ bucketId: rootId, cardIds }) =>
         db.evidenceBucket.upsert({
@@ -18,6 +19,9 @@ export default async ({ gid }: { gid: string }): Promise<any> => {
         }),
       ),
     ]);
+    // Joining a bucket changes the bucket id and copy count of every card in it, not just this one
+    await markDirty([id, ...updates.flatMap(({ cardIds }) => cardIds)]);
+    return result;
   } catch (err) {
     // Let BullMQ's retry/backoff handle transient failures — swallowing here would
     // mark the job completed and silently drop the card from dedup.
