@@ -5,10 +5,13 @@ import * as jwt from 'jsonwebtoken';
 import { buildSchema } from 'type-graphql';
 import * as resolvers from './resolvers';
 import { API_PATH, API_PORT } from 'app/constants';
+import { parseTrustProxy } from 'app/lib/trustProxy';
 import { rateLimitPlugin, RateLimitResolver } from './plugins';
 
 async function main() {
   const app = express();
+  // Decides what `req.ip` is, which the rate limiter keys on. See src/lib/trustProxy.ts.
+  app.set('trust proxy', parseTrustProxy(process.env.TRUST_PROXY));
 
   const schema = await buildSchema({
     resolvers: [
