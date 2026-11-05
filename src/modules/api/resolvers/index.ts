@@ -65,5 +65,6 @@ export * from './file';
 export * from './caselist';
 export * from './evidenceBucket';
 export * from './tag';
+export * from './search';
 // Has to be at end for import order to work
 export * from './tasks';

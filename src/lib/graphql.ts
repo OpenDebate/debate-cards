@@ -9,4 +9,7 @@ const transformFields = (fields: any) => {
   );
 };
 
-export const selectFields = (info: GraphQLResolveInfo) => ({ id: true, ...transformFields(graphqlFields(info)) });
+/** Prisma select for the fields of a card the client asked for; `fields` is a graphql-fields tree. */
+export const selectFromFields = (fields: object) => ({ id: true, ...transformFields(fields) });
+
+export const selectFields = (info: GraphQLResolveInfo) => selectFromFields(graphqlFields(info));
