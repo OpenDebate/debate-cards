@@ -1,11 +1,9 @@
 import 'reflect-metadata';
 import { Field, ObjectType } from 'type-graphql';
-import type caselistModule from 'app/modules/caselist';
-import { QueueDataType } from 'app/lib';
 import { CaselistBase, SchoolBase, TeamBase } from '../caselist';
 
 @ObjectType()
-export class OpenevTask implements QueueDataType<typeof caselistModule['openevQueue']> {
+export class OpenevTask {
   @Field()
   name: string;
 
@@ -26,7 +24,7 @@ export class OpenevTask implements QueueDataType<typeof caselistModule['openevQu
 }
 
 @ObjectType()
-export class CaselistTask extends CaselistBase implements QueueDataType<typeof caselistModule['caselistQueue']> {
+export class CaselistTask extends CaselistBase {
   @Field()
   archived: boolean;
 }
@@ -41,7 +39,7 @@ class TaskSchoolInfo extends SchoolBase {
 }
 
 @ObjectType()
-export class SchoolTask implements QueueDataType<typeof caselistModule['schoolQueue']> {
+export class SchoolTask {
   @Field((type) => CaselistTask)
   caselist: CaselistTask;
 
@@ -59,7 +57,7 @@ class TaskTeamInfo extends TeamBase {
 }
 
 @ObjectType()
-export class TeamTask extends SchoolTask implements QueueDataType<typeof caselistModule['teamQueue']> {
+export class TeamTask extends SchoolTask {
   @Field((type) => TaskTeamInfo)
   team: TaskTeamInfo;
 }
@@ -74,7 +72,7 @@ class TagArgs {
 }
 
 @ObjectType()
-export class OpensourceTask implements QueueDataType<typeof caselistModule['opensourceQueue']> {
+export class OpensourceTask {
   @Field()
   id: number;
 
@@ -86,4 +84,4 @@ export class OpensourceTask implements QueueDataType<typeof caselistModule['open
 }
 
 @ObjectType()
-export class UpdateTask extends CaselistTask implements QueueDataType<typeof caselistModule['updateQueue']> {}
+export class UpdateTask extends CaselistTask {}

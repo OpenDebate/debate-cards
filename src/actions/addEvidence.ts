@@ -1,12 +1,10 @@
 import { Prisma } from '@prisma/client';
-import { db, TypedEvent } from 'app/lib';
+import { db } from 'app/lib';
 import { omit } from 'lodash';
 
 type EvidenceData = Omit<Prisma.EvidenceCreateInput, 'file'> & { file: Prisma.FileWhereUniqueInput };
 
-export const onAddEvidence = new TypedEvent<{ gid: string }>();
-
-export default async (data: EvidenceData): Promise<void> => {
+export default async (data: EvidenceData): Promise<{ gid: string }> => {
   const evidence = await db.evidence.upsert({
     where: { gid: data.gid },
     create: {
@@ -17,6 +15,5 @@ export default async (data: EvidenceData): Promise<void> => {
     select: { gid: true },
   });
 
-  onAddEvidence.emit({ gid: evidence.gid });
-  return;
+  return { gid: evidence.gid };
 };

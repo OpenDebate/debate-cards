@@ -3,9 +3,20 @@ import { ModelFile } from 'app/constants/caselist/api';
 import { connectOrCreateTag, TagInput } from 'app/lib';
 import addFile from './addFile';
 import downloadFile from './downloadFile';
+import { access } from 'fs/promises';
 
-export default async (data: ModelFile): Promise<void> => {
-  await downloadFile(data.path);
+const DOCUMENT_DIR = process.env.DOCUMENT_PATH || './documents';
+
+export default async (data: ModelFile): Promise<{ gid: string }> => {
+  const filePath = `${DOCUMENT_DIR}/${data.path}`;
+  let cached = false;
+  try {
+    await access(filePath);
+    cached = true;
+  } catch {
+    await downloadFile(data.path);
+  }
+  console.log(`[openev] ${cached ? 'cached' : 'downloaded'}: ${data.name}`);
   const campName = CAMP_NAMES[data.camp] ?? data.camp;
   const tags: TagInput[] = [
     { name: 'openev', label: 'Open Evidence' },
@@ -25,9 +36,9 @@ export default async (data: ModelFile): Promise<void> => {
     }
   if (!tags.find((tag) => tag.name === 'ld')) tags.push({ name: 'cx', label: 'Policy' });
 
-  return addFile({
+  return await addFile({
     name: data.name,
-    path: `./documents/${data.path}`,
+    path: `${DOCUMENT_DIR}/${data.path}`,
     tags: { connectOrCreate: tags.map(connectOrCreateTag) },
   });
 };

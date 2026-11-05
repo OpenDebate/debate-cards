@@ -1,7 +1,5 @@
 import { db } from 'app/lib';
-import { Prisma } from '@prisma/client';
 import { dedup, getSentences } from 'app/lib/debate-tools/duplicate';
-import { onAddEvidence } from './addEvidence';
 
 // Note: Redis updates and postgres updates are atomic, but does not guarantee that if redis was updated so was database
 export default async ({ gid }: { gid: string }): Promise<any> => {
@@ -21,9 +19,8 @@ export default async ({ gid }: { gid: string }): Promise<any> => {
       ),
     ]);
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError) {
-      console.error(`Database error deduping ${gid}, retrying`, err);
-      return onAddEvidence.emit({ gid }); // Retry in case of database error
-    } else throw new Error(`Failed to dedup ${gid}`, { cause: err });
+    // Let BullMQ's retry/backoff handle transient failures — swallowing here would
+    // mark the job completed and silently drop the card from dedup.
+    throw new Error(`Failed to dedup ${gid}: ${err.message}`);
   }
 };

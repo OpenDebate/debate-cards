@@ -4,26 +4,25 @@ import path from 'path';
 import addFile from './addFile';
 import downloadFile from './downloadFile';
 
+const DOCUMENT_DIR = process.env.DOCUMENT_PATH || './documents';
+
 export type OpensourceLoadedEvent = {
   id: number;
   filePath: string;
   tags: TagInput[];
 };
 
-export default async ({ id, filePath, tags }: OpensourceLoadedEvent): Promise<void> => {
+export default async ({ id, filePath, tags }: OpensourceLoadedEvent): Promise<{ gid: string } | null> => {
   try {
     await downloadFile(filePath);
-    await addFile({
-      path: `./documents/${filePath}`,
+    return await addFile({
+      path: `${DOCUMENT_DIR}/${filePath}`,
       name: path.parse(filePath).name,
       round: { connect: { id } },
       tags: { connectOrCreate: tags.map(connectOrCreateTag) },
     });
   } catch (err) {
-    if (err === 'skipping') return;
-    console.error(
-      `Error loading ${filePath} for round with id ${id}: `,
-      err.statusCode === 404 ? 'File not Found' : err,
-    );
+    if (err === 'skipping' || err?.statusCode === 404) return null;
+    throw err;
   }
 };
