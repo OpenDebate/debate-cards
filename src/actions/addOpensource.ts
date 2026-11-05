@@ -10,11 +10,12 @@ export type OpensourceLoadedEvent = {
   id: number;
   filePath: string;
   tags: TagInput[];
+  expectCached?: boolean;
 };
 
-export default async ({ id, filePath, tags }: OpensourceLoadedEvent): Promise<{ gid: string } | null> => {
+export default async ({ id, filePath, tags, expectCached }: OpensourceLoadedEvent): Promise<{ gid: string } | null> => {
   try {
-    await downloadFile(filePath);
+    await downloadFile(filePath, expectCached);
     return await addFile({
       path: `${DOCUMENT_DIR}/${filePath}`,
       name: path.parse(filePath).name,

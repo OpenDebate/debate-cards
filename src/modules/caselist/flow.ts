@@ -9,6 +9,8 @@ export type CaselistLoadOptions = {
   names?: string[];
   /** Temporary: limit schools by alphabetical character. E.g., 'M' processes only schools A-M */
   schoolNameAlphaLimit?: string;
+  /** When true, assume all API responses are cached. Missing files on disk are skipped without API calls. */
+  expectCached?: boolean;
 };
 
 export async function loadCaselists(options: CaselistLoadOptions): Promise<number> {
@@ -25,7 +27,7 @@ export async function loadCaselists(options: CaselistLoadOptions): Promise<numbe
   await caselistQueue.addBulk(
     caselists.map((caselist) => ({
       name: `caselist:${caselist.name}`,
-      data: { name: caselist.name, schoolNameAlphaLimit: options.schoolNameAlphaLimit },
+      data: { name: caselist.name, schoolNameAlphaLimit: options.schoolNameAlphaLimit, expectCached: options.expectCached },
     })),
   );
 
