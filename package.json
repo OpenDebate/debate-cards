@@ -10,7 +10,10 @@
     "start:tasks": "node ./build/tasks",
     "start:api": "node ./build/modules/api",
     "dev": "ts-node-dev --poll --respawn -r tsconfig-paths/register ./src/",
-    "dev:api": "ts-node-dev --transpile-only --poll --respawn --inspect=0.0.0.0:9230 -r tsconfig-paths/register ./src/modules/api"
+    "dev:api": "ts-node-dev --transpile-only --poll --respawn --inspect=0.0.0.0:9230 -r tsconfig-paths/register ./src/modules/api",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "seed": "ts-node -r tsconfig-paths/register src/seed.ts"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^8.2.1",
@@ -58,6 +61,7 @@
     "eslint-plugin-prettier": "^3.1.4",
     "jest": "^26.6.3",
     "prettier": "^2.0.5",
+    "ts-jest": "26",
     "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^3.12.0",
     "tscpaths": "^0.0.9",
