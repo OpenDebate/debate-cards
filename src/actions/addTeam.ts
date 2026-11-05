@@ -25,8 +25,14 @@ export default async ({ caselist, school, team }: TeamLoadedEvent): Promise<AddT
   }
 
   if (updated) {
-    const { body: cites } = await caselistApi.getCites(caselist.name, school.name, saved.name);
-    await Promise.all(cites.map((cite) => cite.cites && db.cite.upsert(caselistToPrisma(cite, 'citeId', 'roundId'))));
+    // Rounds are already saved as up to date, so throwing here would make the retry skip them
+    // and drop their opensource files. Cites are secondary; log and carry on.
+    try {
+      const { body: cites } = await caselistApi.getCites(caselist.name, school.name, saved.name);
+      await Promise.all(cites.map((cite) => cite.cites && db.cite.upsert(caselistToPrisma(cite, 'citeId', 'roundId'))));
+    } catch (err) {
+      console.warn(`Failed to load cites for ${caselist.name}/${school.name}/${saved.name}: ${err?.message ?? err}`);
+    }
   }
 
   return { id: saved.id, opensourceEvents };
