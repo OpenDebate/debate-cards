@@ -124,6 +124,35 @@ export class QueueStatsResolver {
     await queue.obliterate({ force: true });
     return before.waiting + before.delayed;
   }
+
+  @Mutation(() => LoadResults)
+  @Authorized('ADMIN')
+  async resetBuckets(): Promise<LoadResults> {
+    const { db } = await import('app/lib');
+    const { redis } = await import('app/modules/deduplicator/redis');
+    const { loadDedupJobs } = await import('app/modules/deduplicator/flow');
+
+    // Clear Postgres: unlink all evidence from buckets, then delete all buckets
+    await db.evidence.updateMany({ where: { bucketId: { not: null } }, data: { bucketId: null } });
+    await db.evidenceBucket.deleteMany({});
+
+    // Clear Redis dedup keys (S: SB: CSB: CL: BS: prefixes)
+    const connected = redis.isOpen;
+    if (!connected) await redis.connect();
+    for (const prefix of ['S:', 'SB:', 'CSB:', 'CL:', 'BS:']) {
+      let cursor = 0;
+      do {
+        const result = await redis.scan(cursor, { MATCH: `${prefix}*`, COUNT: 1000 });
+        cursor = result.cursor;
+        if (result.keys.length > 0) await redis.del(result.keys);
+      } while (cursor !== 0);
+    }
+    if (!connected) await redis.quit();
+
+    // Re-enqueue all evidence for dedup
+    const size = await loadDedupJobs({ loadPending: true });
+    return { size };
+  }
 }
 
 export const QueueResolvers = [QueueStatsResolver];

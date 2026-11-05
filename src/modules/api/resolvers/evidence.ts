@@ -36,7 +36,10 @@ export class EvidenceResolver extends createGetResolver('evidence', Evidence, [{
       ? {
           terms_set: {
             'File.tags': {
-              terms: tags.map((tag) => tag.toLowerCase()), // For some reason only lowercase works
+              // File.tags is a keyword field, so terms match case-sensitively —
+              // lowercasing here silently broke every tag with capitals (camp
+              // names like GDI, caselist names, school names).
+              terms: tags,
               // Number of tags matched has to equal number of tags in query
               minimum_should_match_script: { params: { numTags: tags.length }, source: 'params.numTags' },
             },
