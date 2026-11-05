@@ -82,6 +82,7 @@ ADMIN_PASSWORD=your_admin_password
 # MAX_QUERY_COMPLEXITY=100                  # GraphQL query cost limit
 # RATE_LIMIT_POINTS=1000                    # complexity points per RATE_LIMIT_DURATION
 # RATE_LIMIT_DURATION=60                    # seconds
+# TRUST_PROXY=1                            # reverse proxies in front of the API (Traefik: 1). Unset when clients connect directly
 ```
 
 For Docker-internal connections (inside `compose.yaml`), hostnames use the service names (`postgres`, `redis`, `elasticsearch`). For host-machine access (dev commands, seed, tests), use `localhost`.
